@@ -26,13 +26,11 @@ create_ps_decoder_c(int argc, char *argv[]);
 static PyObject *
 create_ps_decoder(PyObject *self, PyObject *args);
 
+static ps_decoder_t *
+get_ps_decoder_t(PyObject *args);
 
-// High-level interface funcs to pocket sphinx based on dragonfly natlink
-// engine funcs.
-
-// This function can do stuff with the "sphinxbase/ad.h" functions to direct
 static PyObject *
-recognize_from_mic(PyObject *self, PyObject *args);
+free_ps_decoder(PyObject *self, PyObject *args);
 
 // This shouldn't be exposed to Python
 // It is a generic function for setting multiple callbacks.

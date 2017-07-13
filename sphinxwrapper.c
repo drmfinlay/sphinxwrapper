@@ -18,6 +18,10 @@ static const arg_t cont_args_def[] = {
      ARG_STRING,
      NULL,
      "Name of audio device to use for input."},
+    {"-inmic",
+     ARG_BOOLEAN,
+     "no",
+     "Transcribe audio from microphone."},
     {"-time",
      ARG_BOOLEAN,
      "no",
@@ -30,6 +34,8 @@ static PyObject *CallbackNotSetError;
 static PyObject *hypothesis_callback;
 static PyObject *test_callback;
 
+const char* ps_capsule_name = "PocketSphinxDecoder.Instance";
+
 static ps_decoder_t *
 create_ps_decoder_c(int argc, char *argv[]) {
     char const *cfg;
@@ -40,19 +46,16 @@ create_ps_decoder_c(int argc, char *argv[]) {
     if (config && (cfg = cmd_ln_str_r(config, "-argfile")) != NULL) {
         config = cmd_ln_parse_file_r(config, cont_args_def, cfg, FALSE);
     }
-    
+
     if (config == NULL) {
-        E_INFO("Specify '-adcdev <device identifier>' to recognize from microphone using the specified device.\n");
-        cmd_ln_free_r(config);
-        return NULL;
+	return NULL;
     }
     
     ps_default_search_args(config);
     ps = ps_init(config);
     if (ps == NULL) {
         cmd_ln_free_r(config);
-        E_ERROR("PocketSphinx couldn't be initialised. Is your configuration right?");
-        return NULL;
+        E_ERROR("PocketSphinx couldn't be initialised. Is your configuration right?\n");
     }
     
     return ps;
@@ -68,30 +71,73 @@ create_ps_decoder(PyObject *self, PyObject *args) {
         if (!PyList_Check(list)) {
             PyErr_SetString(PyExc_TypeError, "parameter must be a list");
 	    return NULL;
+	} else if (PyList_Size(list) < 1) {
+            PyErr_SetString(PyExc_IndexError, "list must have at least 1 item");
+	    return NULL;
 	}
+	
 	Py_XINCREF(list);
 	list_size = PyList_Size(list);
 	char *strings[list_size];
 	for (Py_ssize_t i = 0; i < list_size; i++) {
 	    PyObject * item = PyList_GetItem(list, i);
-	    // Is this paranoid?
-	    Py_XINCREF(item);
+	    Py_XINCREF(item); // <paranoia?>
 	    if (!PyString_Check(item)) {
 		// Raise the exception flag and return NULL
 		PyErr_SetString(PyExc_TypeError, "all list items must be strings!");
-		Py_XDECREF(item);
 		Py_XDECREF(list);
-		
+		Py_XDECREF(item);
 		return NULL;
 	    }
-	    char *str = PyString_AsString(item);
-	    printf("%s\n", str);
-	    strings[i] = str;
-	    Py_XDECREF(item);
+		
+	    strings[i] = PyString_AsString(item);;
+	    Py_XDECREF(item); // </paranoia?>
 	}
+
+	// Init a new pocket sphinx decoder
+	ps_decoder_t * ps = create_ps_decoder_c(list_size, strings);
+	PyObject *capsule = PyCapsule_New(ps, ps_capsule_name, NULL);
+	Py_XINCREF(capsule);
+	result = capsule;
 	
-	result = list;
     }
+    return result;
+}
+
+static ps_decoder_t *
+get_ps_decoder_t(PyObject *args) {
+    PyObject *capsule = NULL;
+    ps_decoder_t *result = NULL;
+    if (PyArg_ParseTuple(args, "O:get_ps_decoder_t", &capsule) &&
+	PyCapsule_IsValid(capsule, ps_capsule_name)) {
+	Py_XINCREF(capsule);
+	result = PyCapsule_GetPointer(capsule, ps_capsule_name);
+	Py_XDECREF(capsule);
+    } else {
+	PyErr_SetString(PyExc_ValueError, "passed object has no Pocket Sphinx decoder reference");
+    }
+
+    return result;
+}
+
+
+static PyObject *
+free_ps_decoder(PyObject *self, PyObject *args) {
+    PyObject *result = NULL;
+
+    // Free pocket sphinx decoder using the pointer in the Python capsule
+    ps_decoder_t *ps = get_ps_decoder_t(args);
+
+    if (ps != NULL) {
+	ps_free(ps);
+	/* Boilerplate to return "None" */
+	Py_INCREF(Py_None);
+	result = Py_None;	
+    }	
+
+    // Note: If 'ps' is NULL, then assume that get_ps_decoder_t called PyErr_String,
+    // and leave 'result' as NULL.
+    
     return result;
 }
 
@@ -169,7 +215,12 @@ call_test_callback(PyObject *self, PyObject *args) {
 
 static PyMethodDef sphinxwrapper_funcs[] = {
     {"create_ps_decoder",  create_ps_decoder, METH_VARARGS,
-     "Create a new ps decoder using the arguments passed."},
+     "Create a new Pocket Sphinx decoder using the arguments passed."},
+    {"free_ps_decoder",  free_ps_decoder, METH_VARARGS,
+     "Free a Pocket Sphinx decoder using the Python object passed.\n"
+     "Don't call this with an already free Pocket Sphinx decoder object; "
+     "you'll get a seg fault as the contained ps_decoder_t points to already "
+     "freed resources."},
     {"set_test_callback", set_test_callback, METH_VARARGS,
      "Set a Python callback method for C to call."},
     {"set_hypothesis_callback", set_hypothesis_callback, METH_VARARGS,
