@@ -1,5 +1,5 @@
 # pocketsphinx-c-python
-Python C extension for pocketsphinx for interaction with dragonfly
+Python C extension for Pocket Sphinx for interaction with [Dragonfly](https://github.com/t4ngo/dragonfly)
 
 This is a work in progress, but this project aims to create a backend for using Pocket Sphinx with 
 [Dragonfly](https://github.com/t4ngo/dragonfly) for the excellent macroing support it offers. 
