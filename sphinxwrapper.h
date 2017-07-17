@@ -8,51 +8,66 @@
 #ifndef SPHINXWRAPPER_H_
 #define SPHINXWRAPPER_H_
 
-/*
- * Include Python API so we can give Python objects which represent pocket sphinx's structs
- * 
- */
-#include <python2.7/Python.h>
 #include <stdio.h>
-
+#include <stdbool.h>
+#include <python2.7/Python.h>
+#include <python2.7/structmember.h>
 #include <sphinxbase/err.h>
 #include <sphinxbase/cmd_ln.h>
 #include <pocketsphinx.h>
+#include <sphinxbase/ad.h>
 
-// Wrapper to parse passed arguments and initialise a pocket sphinx decoder.
+static void
+sleep_msec(int32 ms);
+
+typedef struct {
+    PyObject_HEAD
+    PyObject *ps_args; // list containing only strings and at least 1
+    PyObject *ps_capsule; // hidden Py_Capsule object containing a ref to ps_decoder_t
+    PyObject *config_capsule; // hidden Py_Capsule object containing a ref to cmd_ln_t
+    PyObject *hypothesis_callback; // callable
+    PyObject *test_callback; // callable
+} PSObj;
+
+static PyObject *
+PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
+
+static void
+PSObj_dealloc(PSObj* self);
+
+/* Used to get the pointer stored in a PSObj instance's capsule,
+ * or NULL if there isn't one and also call PyErr_SetString.
+ */
 static ps_decoder_t *
-create_ps_decoder_c(int argc, char *argv[]);
+get_ps_decoder_t(PSObj *self);
+
+static cmd_ln_t *
+get_cmd_ln_t(PSObj *self);
+
+static int
+PSObj_init(PSObj *self, PyObject *args, PyObject *kwds);
 
 static PyObject *
-create_ps_decoder(PyObject *self, PyObject *args);
-
-static ps_decoder_t *
-get_ps_decoder_t(PyObject *args);
+PSObj_get_test_callback(PSObj *self, void *closure);
 
 static PyObject *
-free_ps_decoder(PyObject *self, PyObject *args);
+PSObj_get_hypothesis_callback(PSObj *self, void *closure);
 
-// This shouldn't be exposed to Python
-// It is a generic function for setting multiple callbacks.
-static PyObject *
-set_callback_func(PyObject **callback_pptr, PyObject *args);
+static int
+PSObj_set_test_callback(PSObj *self, PyObject *value, void *closure);
 
-// General C function to call a Python callback function
-static PyObject *
-call_callback(PyObject *callback_ptr, PyObject *args);
+static int
+PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure);
 
-static PyObject *
-set_hypothesis_callback(PyObject *self, PyObject *args);
+/*
+ * Initialise a Pocket Sphinx decoder with arguments.
+ * @return true on success, false on failure
+ */
+static bool
+init_ps_decoder_with_args(PSObj *self, int argc, char *argv[]);
 
-static PyObject *
-set_recognition_results_callback(PyObject *self, PyObject *args);
-
-// JSGF or FSG? Or both?
-static PyObject *
-create_grammar_obj(PyObject *self, PyObject *args);
-
-static PyObject *
-start_decoders(PyObject *self, PyObject *args);
+static void
+recognize_from_microphone(ps_decoder_t *ps);
 
 // Required Python module init function
 PyMODINIT_FUNC

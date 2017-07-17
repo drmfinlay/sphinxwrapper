@@ -7,12 +7,18 @@
 
 #include "sphinxwrapper.h"
 
+static PyObject *PocketSphinxError;
+static PyObject *CallbackNotSetError;
+
+const char* ps_capsule_name = "sphinxwrapper.ps_ptr";
+const char* config_capsule_name = "sphinxwrapper.config_ptr";
+
 static const arg_t cont_args_def[] = {
     POCKETSPHINX_OPTIONS,
     /* Argument file. */
     {"-argfile",
      ARG_STRING,
-     NULL,
+     NULL, 
      "Argument file giving extra arguments."},
     {"-adcdev",
      ARG_STRING,
@@ -29,16 +35,322 @@ static const arg_t cont_args_def[] = {
     CMDLN_EMPTY_OPTION
 };
 
-static PyObject *PocketSphinxError;
-static PyObject *CallbackNotSetError;
-static PyObject *hypothesis_callback;
-static PyObject *test_callback;
 
-const char* ps_capsule_name = "PocketSphinxDecoder.Instance";
+/* Sleep for specified msec */
+static void
+sleep_msec(int32 ms) {
+#if (defined(_WIN32) && !defined(GNUWINCE)) || defined(_WIN32_WCE)
+    Sleep(ms);
+#else
+    /* ------------------- Unix ------------------ */
+    struct timeval tmo;
+    
+    tmo.tv_sec = 0;
+    tmo.tv_usec = ms * 1000;
+    
+    select(0, NULL, NULL, NULL, &tmo);
+#endif
+}
+
+static PyObject *
+PSObj_recognize_from_microphone(PSObj *self) {
+    ps_decoder_t * ps = get_ps_decoder_t(self);
+    
+    if (ps == NULL) {
+	E_ERROR("Pocket Sphinx was not initialised. Have you called 'ps_init()'?\n");
+	return NULL;
+    }
+    
+    ad_rec_t *ad;
+    int16 adbuf[2048];
+    uint8 utt_started, in_speech;
+    int32 k;
+    char const *hyp;
+    const char *mic_dev = cmd_ln_str_r(get_cmd_ln_t(self), "-adcdev");
+
+    // Doesn't matter if dev is NULL; ad_open_dev will use the
+    // defined default device.
+    ad = ad_open_dev(mic_dev, 16000);
+    if (ad == NULL)
+        E_FATAL("Failed to open audio device\n");
+    if (ad_start_rec(ad) < 0)
+        E_FATAL("Failed to start recording\n");
+    
+    if (ps_start_utt(ps) < 0)
+        E_FATAL("Failed to start utterance\n");
+    utt_started = FALSE;
+    printf("READY....\n");
+    
+    // TODO We need to be able to call ps_reinit from Python
+    // so that the recognizer updates itself with new configuration
+    // such as an updated acoustic model, dictionary or grammar files.
+    for (;;) {
+        if ((k = ad_read(ad, adbuf, 2048)) < 0)
+            E_FATAL("Failed to read audio\n");
+        ps_process_raw(ps, adbuf, k, FALSE, FALSE);
+        in_speech = ps_get_in_speech(ps);
+        if (in_speech && !utt_started) {
+            utt_started = TRUE;
+            printf("Listening...\n");
+        }
+        if (!in_speech && utt_started) {
+            /* speech -> silence transition, time to start new utterance  */
+            ps_end_utt(ps);
+            hyp = ps_get_hyp(ps, NULL );
+            if (hyp != NULL) {
+                printf("%s\n", hyp);
+		// Call the Python hypothesis_callback function
+		PyObject *py_hyp = Py_BuildValue("s", hyp);
+		PyObject *callback = self->hypothesis_callback;
+		if (PyCallable_Check(callback)) {
+		    PyObject_CallObject(callback, py_hyp);
+		}
+	    }
+            
+            if (ps_start_utt(ps) < 0)
+                E_FATAL("Failed to start utterance\n");
+            utt_started = FALSE;
+            printf("READY....\n");
+        }
+        sleep_msec(30);
+    }
+    ad_close(ad);
+}
+
+
+static PyMethodDef PSObj_methods[] = {
+    {"recognize_from_microphone",
+     (PyCFunction)PSObj_recognize_from_microphone, METH_NOARGS,
+     PyDoc_STR("Recognize speech from the microphone")},
+    {NULL}  /* Sentinel */
+};
+
+
+#ifndef PyMODINIT_FUNC	/* declarations for DLL import/export */
+#define PyMODINIT_FUNC void
+#endif
+
+static PyObject *
+PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+    PSObj *self;
+
+    self = (PSObj *)type->tp_alloc(type, 0);
+    if (self != NULL) {
+	// Set the callbacks to None initially
+	// TODO Set to a lambda like 'lambda x : None' instead?
+        Py_INCREF(Py_None);
+        self->test_callback = Py_None;
+        Py_INCREF(Py_None);
+        self->hypothesis_callback = Py_None;
+
+	// Do the same with capsules
+        Py_INCREF(Py_None);
+        self->ps_capsule = Py_None;
+        Py_INCREF(Py_None);
+        self->config_capsule = Py_None;
+    }
+
+    return (PyObject *)self;
+}
+
+static void
+PSObj_dealloc(PSObj* self) {
+    Py_XDECREF(self->hypothesis_callback);
+    Py_XDECREF(self->test_callback);
+    
+    // Deallocate the config object and its Py_Capsule
+    cmd_ln_t *config = get_cmd_ln_t(self);
+    if (config != NULL)
+	cmd_ln_free_r(config);
+    Py_XDECREF(self->config_capsule);
+
+    // Deallocate the Pocket Sphinx decoder and its Py_Capsule
+    ps_decoder_t *ps = get_ps_decoder_t(self);
+    if (ps != NULL)
+	ps_free(ps);
+    Py_XDECREF(self->ps_capsule);
+
+    // Finally free the PSObj itself
+    Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
 
 static ps_decoder_t *
-create_ps_decoder_c(int argc, char *argv[]) {
-    char const *cfg;
+get_ps_decoder_t(PSObj *self) {
+    ps_decoder_t *result = NULL;
+    if (PyCapsule_IsValid(self->ps_capsule, ps_capsule_name)) {
+	result = PyCapsule_GetPointer(self->ps_capsule, ps_capsule_name);
+    } else {
+	PyErr_SetString(PyExc_ValueError, "PocketSphinx instance has no native "
+			"decoder reference");
+    }
+
+    return result;
+}
+
+static cmd_ln_t *
+get_cmd_ln_t(PSObj *self) {
+    cmd_ln_t *result = NULL;
+    if (PyCapsule_IsValid(self->config_capsule, config_capsule_name)) {
+	result = PyCapsule_GetPointer(self->config_capsule, config_capsule_name);
+    } else {
+	PyErr_SetString(PyExc_ValueError, "PocketSphinx instance has no native "
+			"config reference");
+    }
+
+    return result;
+}
+
+static int
+PSObj_init(PSObj *self, PyObject *args, PyObject *kwds) {
+    PyObject *ps_args=NULL, *tmp;
+    Py_ssize_t list_size;
+
+    static char *kwlist[] = {"ps_args", NULL};
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &ps_args))
+        return -1;
+
+    if (ps_args) {
+	if (!PyList_Check(ps_args)) {
+	    // Raise the exception flag and return -1
+            PyErr_SetString(PyExc_TypeError, "parameter must be a list");
+	    return -1;
+	} else if (PyList_Size(ps_args) < 1) {
+            PyErr_SetString(PyExc_IndexError, "list must have at least 1 item");
+	    return -1;
+	}
+        
+	// Extract strings from Python list into a C string array and use that
+	// to call init_ps_decoder_with_args
+	list_size = PyList_Size(ps_args);
+	char *strings[list_size];
+	for (Py_ssize_t i = 0; i < list_size; i++) {
+	    PyObject * item = PyList_GetItem(ps_args, i);
+	    if (!PyString_Check(item)) {
+		PyErr_SetString(PyExc_TypeError, "all list items must be strings!");
+		return -1;
+	    }
+		
+	    strings[i] = PyString_AsString(item);
+	}
+
+	// Init a new pocket sphinx decoder or raise a PocketSphinxError and return -1
+	if (!init_ps_decoder_with_args(self, list_size, strings)) {
+	    PyErr_SetString(PocketSphinxError, "PocketSphinx couldn't be initialised. "
+			    "Is your configuration right?");
+	    return -1;
+	}
+    }
+
+    return 0;
+}
+
+static PyObject *
+PSObj_get_test_callback(PSObj *self, void *closure) {
+    Py_INCREF(self->test_callback);
+    return self->test_callback;
+}
+
+static PyObject *
+PSObj_get_hypothesis_callback(PSObj *self, void *closure) {
+    Py_INCREF(self->hypothesis_callback);
+    return self->hypothesis_callback;
+}
+
+static int
+PSObj_set_test_callback(PSObj *self, PyObject *value, void *closure) {
+    if (value == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Cannot delete the test_callback attribute");
+        return -1;
+    }
+
+    if (!PyCallable_Check(value)) {
+	PyErr_SetString(PyExc_TypeError, "value must be callable");
+	return -1;
+    }
+    
+    Py_DECREF(self->test_callback);
+    Py_INCREF(value);
+    self->test_callback = value;
+
+    return 0;
+}
+
+static int
+PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure) {
+    if (value == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Cannot delete the hypothesis_callback attribute");
+        return -1;
+    }
+
+    if (!PyCallable_Check(value)) {
+	PyErr_SetString(PyExc_TypeError, "value must be callable");
+	return -1;
+    }
+    
+    Py_DECREF(self->hypothesis_callback);
+    Py_INCREF(value);
+    self->hypothesis_callback = value;
+
+    return 0;
+}
+
+static PyGetSetDef PSObj_getseters[] = {
+    {"test_callback",
+     (getter)PSObj_get_test_callback, (setter)PSObj_set_test_callback,
+     "Test callback", NULL},
+    {"hypothesis_callback",
+     (getter)PSObj_get_hypothesis_callback, (setter)PSObj_set_hypothesis_callback,
+     "Hypothesis callback", NULL},
+    {NULL}  /* Sentinel */
+};
+
+static PyTypeObject PSType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    "sphinxwrapper.PocketSphinx",             /* tp_name */
+    sizeof(PSObj),             /* tp_basicsize */
+    0,                         /* tp_itemsize */
+    (destructor)PSObj_dealloc, /* tp_dealloc */
+    0,                         /* tp_print */
+    0,                         /* tp_getattr */
+    0,                         /* tp_setattr */
+    0,                         /* tp_compare */
+    0,                         /* tp_repr */
+    0,                         /* tp_as_number */
+    0,                         /* tp_as_sequence */
+    0,                         /* tp_as_mapping */
+    0,                         /* tp_hash */
+    0,                         /* tp_call */
+    0,                         /* tp_str */
+    0,                         /* tp_getattro */
+    0,                         /* tp_setattro */
+    0,                         /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT |
+        Py_TPFLAGS_BASETYPE,   /* tp_flags */
+    "Pocket Sphinx decoder objects",           /* tp_doc */
+    0,                         /* tp_traverse */
+    0,                         /* tp_clear */
+    0,                         /* tp_richcompare */
+    0,                         /* tp_weaklistoffset */
+    0,                         /* tp_iter */
+    0,                         /* tp_iternext */
+    PSObj_methods,             /* tp_methods */
+    0,                         /* tp_members */
+    PSObj_getseters,           /* tp_getset */
+    0,                         /* tp_base */
+    0,                         /* tp_dict */
+    0,                         /* tp_descr_get */
+    0,                         /* tp_descr_set */
+    0,                         /* tp_dictoffset */
+    (initproc)PSObj_init,      /* tp_init */
+    0,                         /* tp_alloc */
+    PSObj_new,                 /* tp_new */
+};
+
+static bool
+init_ps_decoder_with_args(PSObj *self, int argc, char *argv[]) {
+    char const *cfg; 
     ps_decoder_t *ps;
     cmd_ln_t *config = cmd_ln_parse_r(NULL, cont_args_def, argc, argv, TRUE);
     
@@ -48,193 +360,50 @@ create_ps_decoder_c(int argc, char *argv[]) {
     }
 
     if (config == NULL) {
-	return NULL;
+	return false;
     }
     
     ps_default_search_args(config);
     ps = ps_init(config);
+
     if (ps == NULL) {
-        cmd_ln_free_r(config);
-        E_ERROR("PocketSphinx couldn't be initialised. Is your configuration right?\n");
+	return false;
     }
     
-    return ps;
-}
-
-static PyObject *
-create_ps_decoder(PyObject *self, PyObject *args) {
-    PyObject *result = NULL;
-    PyObject *list;
-    Py_ssize_t list_size;
+    PyObject *tmp;
     
-    if (PyArg_ParseTuple(args, "O:create_ps_decoder", &list)) {
-        if (!PyList_Check(list)) {
-            PyErr_SetString(PyExc_TypeError, "parameter must be a list");
-	    return NULL;
-	} else if (PyList_Size(list) < 1) {
-            PyErr_SetString(PyExc_IndexError, "list must have at least 1 item");
-	    return NULL;
-	}
-	
-	Py_XINCREF(list);
-	list_size = PyList_Size(list);
-	char *strings[list_size];
-	for (Py_ssize_t i = 0; i < list_size; i++) {
-	    PyObject * item = PyList_GetItem(list, i);
-	    Py_XINCREF(item); // <paranoia?>
-	    if (!PyString_Check(item)) {
-		// Raise the exception flag and return NULL
-		PyErr_SetString(PyExc_TypeError, "all list items must be strings!");
-		Py_XDECREF(list);
-		Py_XDECREF(item);
-		return NULL;
-	    }
-		
-	    strings[i] = PyString_AsString(item);;
-	    Py_XDECREF(item); // </paranoia?>
-	}
-
-	// Init a new pocket sphinx decoder
-	ps_decoder_t * ps = create_ps_decoder_c(list_size, strings);
-	PyObject *capsule = PyCapsule_New(ps, ps_capsule_name, NULL);
-	Py_XINCREF(capsule);
-	result = capsule;
-	
-    }
-    return result;
-}
-
-static ps_decoder_t *
-get_ps_decoder_t(PyObject *args) {
-    PyObject *capsule = NULL;
-    ps_decoder_t *result = NULL;
-    if (PyArg_ParseTuple(args, "O:get_ps_decoder_t", &capsule) &&
-	PyCapsule_IsValid(capsule, ps_capsule_name)) {
-	Py_XINCREF(capsule);
-	result = PyCapsule_GetPointer(capsule, ps_capsule_name);
-	Py_XDECREF(capsule);
-    } else {
-	PyErr_SetString(PyExc_ValueError, "passed object has no Pocket Sphinx decoder reference");
-    }
-
-    return result;
-}
-
-
-static PyObject *
-free_ps_decoder(PyObject *self, PyObject *args) {
-    PyObject *result = NULL;
-
-    // Free pocket sphinx decoder using the pointer in the Python capsule
-    ps_decoder_t *ps = get_ps_decoder_t(args);
-
-    if (ps != NULL) {
-	ps_free(ps);
-	/* Boilerplate to return "None" */
-	Py_INCREF(Py_None);
-	result = Py_None;	
-    }	
-
-    // Note: If 'ps' is NULL, then assume that get_ps_decoder_t called PyErr_String,
-    // and leave 'result' as NULL.
+    // Create a capsule containing a pointer to the new decoder used only in C.
+    PyObject *new_capsule1 = PyCapsule_New(ps, ps_capsule_name, NULL);
+    tmp = self->ps_capsule;
+    Py_INCREF(new_capsule1);
+    self->ps_capsule = new_capsule1;
+    Py_XDECREF(tmp);
     
-    return result;
-}
+    // Create another one to store the config pointer for later use
+    PyObject *new_capsule2 = PyCapsule_New(config, config_capsule_name, NULL);
+    tmp = self->config_capsule;
+    Py_INCREF(new_capsule2);
+    self->config_capsule = new_capsule2;
+    Py_XDECREF(tmp);
 
-
-static PyObject *
-set_callback_func(PyObject **callback_pptr, PyObject *args) {
-    PyObject *result = NULL;
-    PyObject *temp;
-    
-    // PyArg_ParseTuple will put the result into an obj referenced by temp
-    // or return NULL, which is false.
-    if (PyArg_ParseTuple(args, "O:set_callback", &temp)) {
-        if (!PyCallable_Check(temp)) {
-            PyErr_SetString(PyExc_TypeError, "parameter must be callable");
-            return NULL;
-        }
-	
-        Py_XINCREF(temp);           /* Add a reference to new callback */
-        Py_XDECREF(&(*callback_pptr));  /* Dispose of previous callback */
-        *callback_pptr = temp;       /* Remember new callback using callback_ptr */
-	
-        /* Boilerplate to return "None" */
-        Py_INCREF(Py_None);
-        result = Py_None;
-    }
-    
-    return result;
-}
-
-static PyObject *
-call_callback(PyObject *callback_ptr, PyObject *args) {
-    int arg;
-    PyObject *arglist;
-    PyObject *result = NULL;
-    arg = 123;
-
-    if (callback_ptr != NULL) {
-	/* Time to call the callback */
-	arglist = Py_BuildValue("(i)", arg);
-	result = PyObject_CallObject(callback_ptr, arglist);
-	Py_DECREF(arglist);
-    } else {
-	// Set a Python exception here so Python knows what's
-	// happened
-	PyErr_SetString(CallbackNotSetError, "No callback set");
-    }
-    
-    // Don't worry about result being NULL because PyObject_CallObject
-    // should only return NULL if the callback function raised an exception
-    // somehow. We DO NOT need to call PyErr_SetString because the Python
-    // callback function has already done that.
-    return result;
-}
-
-
-static PyObject *
-set_hypothesis_callback(PyObject *self, PyObject *args) {
-    return set_callback_func(&hypothesis_callback, args);
-}
-
-static PyObject *
-set_test_callback(PyObject *self, PyObject *args) {
-    return set_callback_func(&test_callback, args);
-}
-
-static PyObject *
-call_hypothesis_callback(PyObject *self, PyObject *args) {
-    return call_callback(hypothesis_callback, args);
-}
-
-static PyObject *
-call_test_callback(PyObject *self, PyObject *args) {
-    return call_callback(test_callback, args);
+    return true;
 }
 
 static PyMethodDef sphinxwrapper_funcs[] = {
-    {"create_ps_decoder",  create_ps_decoder, METH_VARARGS,
-     "Create a new Pocket Sphinx decoder using the arguments passed."},
-    {"free_ps_decoder",  free_ps_decoder, METH_VARARGS,
-     "Free a Pocket Sphinx decoder using the Python object passed.\n"
-     "Don't call this with an already free Pocket Sphinx decoder object; "
-     "you'll get a seg fault as the contained ps_decoder_t points to already "
-     "freed resources."},
-    {"set_test_callback", set_test_callback, METH_VARARGS,
-     "Set a Python callback method for C to call."},
-    {"set_hypothesis_callback", set_hypothesis_callback, METH_VARARGS,
-     "Set a Python callback method for C to call."},
-    {"call_hypothesis_callback", call_hypothesis_callback, METH_VARARGS,
-     "Call the set Python callback function if it's set."},
-    {"call_test_callback", call_test_callback, METH_VARARGS,
-     "Call the set Python callback function if it's set."},
-    {NULL, NULL, 0, NULL} // Sentinel so the C to Python API knows when there aren't any more funcs
+    {NULL, NULL, 0, NULL} // Sentinel signifying the end of the func declarations
 };
 
 PyMODINIT_FUNC
 initsphinxwrapper() {
     PyObject *module = Py_InitModule("sphinxwrapper", sphinxwrapper_funcs);
+
+    // Set up the 'PocketSphinx' type
+    PSType.tp_new = PSObj_new;
+    if (PyType_Ready(&PSType) < 0)
+        return;
+    
+    Py_INCREF(&PSType);
+    PyModule_AddObject(module, "PocketSphinx", (PyObject *)&PSType);
 
     // Define a new Python exception
     PocketSphinxError = PyErr_NewException("PocketSphinx.Error", NULL, NULL);
