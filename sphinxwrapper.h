@@ -30,6 +30,9 @@ typedef struct {
 } PSObj;
 
 static PyObject *
+PSObj_recognize_from_microphone(PSObj *self);
+
+static PyObject *
 PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
 
 static void
@@ -65,13 +68,6 @@ PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure);
  */
 static bool
 init_ps_decoder_with_args(PSObj *self, int argc, char *argv[]);
-
-static void
-recognize_from_microphone(ps_decoder_t *ps);
-
-// Required Python module init function
-PyMODINIT_FUNC
-initsphinxwrapper();
 
 #endif /* SPHINXWRAPPER_H_ */
 

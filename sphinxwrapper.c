@@ -203,7 +203,7 @@ get_cmd_ln_t(PSObj *self) {
 
 static int
 PSObj_init(PSObj *self, PyObject *args, PyObject *kwds) {
-    PyObject *ps_args=NULL, *tmp;
+    PyObject *ps_args=NULL;
     Py_ssize_t list_size;
 
     static char *kwlist[] = {"ps_args", NULL};
