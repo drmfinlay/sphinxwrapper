@@ -35,23 +35,6 @@ static const arg_t cont_args_def[] = {
     CMDLN_EMPTY_OPTION
 };
 
-
-/* Sleep for specified msec */
-static void
-sleep_msec(int32 ms) {
-#if (defined(_WIN32) && !defined(GNUWINCE)) || defined(_WIN32_WCE)
-    Sleep(ms);
-#else
-    /* ------------------- Unix ------------------ */
-    struct timeval tmo;
-    
-    tmo.tv_sec = 0;
-    tmo.tv_usec = ms * 1000;
-    
-    select(0, NULL, NULL, NULL, &tmo);
-#endif
-}
-
 static PyObject *
 PSObj_recognize_from_microphone(PSObj *self) {
     ps_decoder_t * ps = get_ps_decoder_t(self);
@@ -106,7 +89,6 @@ PSObj_recognize_from_microphone(PSObj *self) {
             utt_started = FALSE;
             printf("READY....\n");
         }
-        sleep_msec(30);
     }
     ad_close(ad);
 }
@@ -252,6 +234,24 @@ PSObj_get_hypothesis_callback(PSObj *self, void *closure) {
     return self->hypothesis_callback;
 }
 
+static PyObject *
+PSObj_get_in_speech(PSObj *self, void *closure) {
+    PyObject * result = NULL;
+    ps_decoder_t * ps = get_ps_decoder_t(self);
+    if (ps != NULL) {
+	uint8 in_speech = ps_get_in_speech(ps);
+	if (in_speech) {
+	    Py_INCREF(Py_True);
+	    result = Py_True;
+	} else {
+	    Py_INCREF(Py_False);
+	    result = Py_False;
+	}
+    }
+
+    return result;
+}
+
 static int
 PSObj_set_test_callback(PSObj *self, PyObject *value, void *closure) {
     if (value == NULL) {
@@ -290,6 +290,7 @@ PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure) {
     return 0;
 }
 
+
 static PyGetSetDef PSObj_getseters[] = {
     {"test_callback",
      (getter)PSObj_get_test_callback, (setter)PSObj_set_test_callback,
@@ -297,6 +298,10 @@ static PyGetSetDef PSObj_getseters[] = {
     {"hypothesis_callback",
      (getter)PSObj_get_hypothesis_callback, (setter)PSObj_set_hypothesis_callback,
      "Hypothesis callback", NULL},
+    {"in_speech",
+     (getter)PSObj_get_in_speech, NULL, // No setter. AttributeError is thrown on set attempt.
+     // From pocketsphinx.h:
+     "Checks if the last feed audio buffer contained speech", NULL},
     {NULL}  /* Sentinel */
 };
 

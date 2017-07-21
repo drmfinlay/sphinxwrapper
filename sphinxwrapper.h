@@ -12,13 +12,10 @@
 #include <stdbool.h>
 #include <python2.7/Python.h>
 #include <python2.7/structmember.h>
-#include <sphinxbase/err.h>
-#include <sphinxbase/cmd_ln.h>
 #include <pocketsphinx.h>
 #include <sphinxbase/ad.h>
-
-static void
-sleep_msec(int32 ms);
+#include <sphinxbase/err.h>
+#include <sphinxbase/cmd_ln.h>
 
 typedef struct {
     PyObject_HEAD
@@ -55,6 +52,9 @@ PSObj_get_test_callback(PSObj *self, void *closure);
 
 static PyObject *
 PSObj_get_hypothesis_callback(PSObj *self, void *closure);
+
+static PyObject *
+PSObj_get_in_speech(PSObj *self, void *closure);
 
 static int
 PSObj_set_test_callback(PSObj *self, PyObject *value, void *closure);
