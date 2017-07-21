@@ -12,7 +12,6 @@
 #include <stdbool.h>
 #include <python2.7/Python.h>
 #include <python2.7/structmember.h>
-#include <python2.7/ceval.h>
 #include <sphinxbase/err.h>
 #include <sphinxbase/cmd_ln.h>
 #include <pocketsphinx.h>
@@ -31,7 +30,7 @@ typedef struct {
 } PSObj;
 
 static PyObject *
-PSObj_start_recognizing_from_mic(PSObj *self);
+PSObj_recognize_from_microphone(PSObj *self);
 
 static PyObject *
 PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
