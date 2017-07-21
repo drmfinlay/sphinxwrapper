@@ -99,12 +99,6 @@ PSObj_recognize_from_microphone(PSObj *self) {
             hyp = ps_get_hyp(ps, NULL );
             if (hyp != NULL) {
                 printf("%s\n", hyp);
-		// Call the Python hypothesis_callback function
-		PyObject *py_hyp = Py_BuildValue("s", hyp);
-		PyObject *callback = self->hypothesis_callback;
-		if (PyCallable_Check(callback)) {
-		    PyObject_CallObject(callback, py_hyp);
-		}
 	    }
             
             if (ps_start_utt(ps) < 0)
