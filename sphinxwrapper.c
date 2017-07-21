@@ -53,7 +53,10 @@ sleep_msec(int32 ms) {
 }
 
 static PyObject *
-PSObj_recognize_from_microphone(PSObj *self) {
+PSObj_start_recognizing_from_mic(PSObj *self) {
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
+    
     ps_decoder_t * ps = get_ps_decoder_t(self);
     
     if (ps == NULL) {
@@ -67,6 +70,9 @@ PSObj_recognize_from_microphone(PSObj *self) {
     int32 k;
     char const *hyp;
     const char *mic_dev = cmd_ln_str_r(get_cmd_ln_t(self), "-adcdev");
+
+    // Release the thread. No Python API allowed beyond this point.
+    PyGILState_Release(gstate);
 
     // Doesn't matter if dev is NULL; ad_open_dev will use the
     // defined default device.
@@ -99,12 +105,21 @@ PSObj_recognize_from_microphone(PSObj *self) {
             hyp = ps_get_hyp(ps, NULL );
             if (hyp != NULL) {
                 printf("%s\n", hyp);
+
+		PyGILState_STATE gstate;
+		gstate = PyGILState_Ensure();
+		
 		// Call the Python hypothesis_callback function
 		PyObject *py_hyp = Py_BuildValue("s", hyp);
 		PyObject *callback = self->hypothesis_callback;
 		if (PyCallable_Check(callback)) {
 		    PyObject_CallObject(callback, py_hyp);
 		}
+		
+
+		// Release the thread.
+		// No Python API allowed beyond this point.
+		PyGILState_Release(gstate);
 	    }
             
             if (ps_start_utt(ps) < 0)
@@ -119,9 +134,9 @@ PSObj_recognize_from_microphone(PSObj *self) {
 
 
 static PyMethodDef PSObj_methods[] = {
-    {"recognize_from_microphone",
-     (PyCFunction)PSObj_recognize_from_microphone, METH_NOARGS,
-     PyDoc_STR("Recognize speech from the microphone")},
+    {"start_recognizing_from_mic",
+     (PyCFunction)PSObj_start_recognizing_from_mic, METH_NOARGS,
+     PyDoc_STR("Recognize speech from the microphone asynchronously.")},
     {NULL}  /* Sentinel */
 };
 
