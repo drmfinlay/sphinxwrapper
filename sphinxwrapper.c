@@ -10,9 +10,6 @@
 static PyObject *PocketSphinxError;
 static PyObject *CallbackNotSetError;
 
-const char* ps_capsule_name = "sphinxwrapper.ps_ptr";
-const char* config_capsule_name = "sphinxwrapper.config_ptr";
-
 static const arg_t cont_args_def[] = {
     POCKETSPHINX_OPTIONS,
     /* Argument file. */
@@ -153,7 +150,7 @@ PSObj_recognize_from_microphone(PSObj *self) {
     uint8 utt_started, in_speech;
     int32 k;
     char const *hyp;
-    const char *mic_dev = cmd_ln_str_r(get_cmd_ln_t(self), "-adcdev");
+    const char *mic_dev = cmd_ln_str_r(self->config, "-adcdev");
 
     // Doesn't matter if dev is NULL; ad_open_dev will use the
     // defined default device.
@@ -235,11 +232,9 @@ PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         Py_INCREF(Py_None);
         self->hypothesis_callback = Py_None;
 
-	// Do the same with capsules
-        Py_INCREF(Py_None);
-        self->ps_capsule = Py_None;
-        Py_INCREF(Py_None);
-        self->config_capsule = Py_None;
+	// Ensure pointer members are NULL
+        self->ps = NULL;
+        self->config = NULL;
 
 	// Ensure the 'ad' member used in init_mic_recording
 	// and read_and_process_audio in set to NULL for now.
@@ -254,17 +249,15 @@ PSObj_dealloc(PSObj* self) {
     Py_XDECREF(self->hypothesis_callback);
     Py_XDECREF(self->test_callback);
     
-    // Deallocate the config object and its Py_Capsule
-    cmd_ln_t *config = get_cmd_ln_t(self);
+    // Deallocate the config object
+    cmd_ln_t *config = self->config;
     if (config != NULL)
 	cmd_ln_free_r(config);
-    Py_XDECREF(self->config_capsule);
 
-    // Deallocate the Pocket Sphinx decoder and its Py_Capsule
-    ps_decoder_t *ps = get_ps_decoder_t(self);
+    // Deallocate the Pocket Sphinx decoder
+    ps_decoder_t *ps = self->ps;
     if (ps != NULL)
 	ps_free(ps);
-    Py_XDECREF(self->ps_capsule);
 
     // Close the audio device if it's open
     ad_rec_t *ad = self->ad;
@@ -275,31 +268,23 @@ PSObj_dealloc(PSObj* self) {
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
-
 static ps_decoder_t *
 get_ps_decoder_t(PSObj *self) {
-    ps_decoder_t *result = NULL;
-    if (PyCapsule_IsValid(self->ps_capsule, ps_capsule_name)) {
-	result = PyCapsule_GetPointer(self->ps_capsule, ps_capsule_name);
-    } else {
+    ps_decoder_t *ps = self->ps;
+    if (ps == NULL)
 	PyErr_SetString(PyExc_ValueError, "PocketSphinx instance has no native "
 			"decoder reference");
-    }
-
-    return result;
+    return ps;
 }
 
 static cmd_ln_t *
 get_cmd_ln_t(PSObj *self) {
-    cmd_ln_t *result = NULL;
-    if (PyCapsule_IsValid(self->config_capsule, config_capsule_name)) {
-	result = PyCapsule_GetPointer(self->config_capsule, config_capsule_name);
-    } else {
+    cmd_ln_t *config = self->config;
+    if (config == NULL)
 	PyErr_SetString(PyExc_ValueError, "PocketSphinx instance has no native "
 			"config reference");
-    }
-
-    return result;
+    
+    return config;
 }
 
 static int
@@ -493,21 +478,11 @@ init_ps_decoder_with_args(PSObj *self, int argc, char *argv[]) {
 	return false;
     }
     
-    PyObject *tmp;
+    // Set a pointer to the new decoder used only in C.
+    self->ps = ps;
     
-    // Create a capsule containing a pointer to the new decoder used only in C.
-    PyObject *new_capsule1 = PyCapsule_New(ps, ps_capsule_name, NULL);
-    tmp = self->ps_capsule;
-    Py_INCREF(new_capsule1);
-    self->ps_capsule = new_capsule1;
-    Py_XDECREF(tmp);
-    
-    // Create another one to store the config pointer for later use
-    PyObject *new_capsule2 = PyCapsule_New(config, config_capsule_name, NULL);
-    tmp = self->config_capsule;
-    Py_INCREF(new_capsule2);
-    self->config_capsule = new_capsule2;
-    Py_XDECREF(tmp);
+    // Set a pointer to the config for later use
+    self->config = config;
 
     return true;
 }

@@ -19,9 +19,8 @@
 
 typedef struct {
     PyObject_HEAD
-    PyObject *ps_args; // list containing only strings and at least 1
-    PyObject *ps_capsule; // hidden Py_Capsule object containing a ref to ps_decoder_t
-    PyObject *config_capsule; // hidden Py_Capsule object containing a ref to cmd_ln_t
+    ps_decoder_t *ps; // pocketsphinx decoder pointer
+    cmd_ln_t * config; // sphinxbase commandline config struct pointer
     PyObject *hypothesis_callback; // callable
     PyObject *test_callback; // callable
     ad_rec_t *ad; // Used for recording audio
@@ -51,12 +50,15 @@ PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
 static void
 PSObj_dealloc(PSObj* self);
 
-/* Used to get the pointer stored in a PSObj instance's capsule,
- * or NULL if there isn't one and also call PyErr_SetString.
+/* Used to get the ps_decoder_t pointer stored in a PSObj instance,
+ * or if it's NULL, return NULL and call PyErr_SetString.
  */
 static ps_decoder_t *
 get_ps_decoder_t(PSObj *self);
 
+/* Used to get the cmd_ln_t pointer stored in a PSObj instance,
+ * or if it's NULL, return NULL and call PyErr_SetString.
+ */
 static cmd_ln_t *
 get_cmd_ln_t(PSObj *self);
 
