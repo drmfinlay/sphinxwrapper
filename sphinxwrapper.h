@@ -24,10 +24,26 @@ typedef struct {
     PyObject *config_capsule; // hidden Py_Capsule object containing a ref to cmd_ln_t
     PyObject *hypothesis_callback; // callable
     PyObject *test_callback; // callable
+    ad_rec_t *ad; // Used for recording audio
 } PSObj;
 
 static PyObject *
 PSObj_recognize_from_microphone(PSObj *self);
+
+static PyObject *
+PSObj_open_audio_device(PSObj *self);
+
+static PyObject *
+PSObj_close_audio_device(PSObj *self);
+
+static PyObject *
+PSObj_start_utterance(PSObj *self);
+
+static PyObject *
+PSObj_end_utterance(PSObj *self);
+
+static PyObject *
+PSObj_read_and_process_audio(PSObj *self);
 
 static PyObject *
 PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds);

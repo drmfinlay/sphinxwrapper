@@ -36,6 +36,110 @@ static const arg_t cont_args_def[] = {
 };
 
 static PyObject *
+PSObj_open_audio_device(PSObj *self) {
+    ps_decoder_t * ps = get_ps_decoder_t(self);
+
+    if (ps == NULL)
+	return NULL;
+    
+    if (self->ad == NULL) {
+	const char *mic_dev = cmd_ln_str_r(get_cmd_ln_t(self), "-adcdev");
+
+	// Doesn't matter if dev is NULL; ad_open_dev will use the
+	// defined default device, at least for pulse audio..
+	// TODO Make sure other ad.h implementations (alsa, jack, etc)
+	// don't seg fault or anything if mic_dev is NULL.
+	self->ad = ad_open_dev(mic_dev, 16000);
+    }
+
+    // If it's still NULL, then that's an error.
+    if (self->ad == NULL) {
+	PyErr_SetString(PocketSphinxError,
+			"Couldn't open audio device.");
+	return NULL;
+    }
+    
+    if (ad_start_rec(self->ad) < 0) {
+        PyErr_SetString(PocketSphinxError,
+			"Failed to start recording.");
+	return NULL;
+    }
+    
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+static PyObject *
+PSObj_close_audio_device(PSObj *self) {
+    ad_rec_t *ad = self->ad;
+    if (ad != NULL) {
+	ad_close(ad);
+	self->ad = NULL;
+    }
+}
+
+static PyObject *
+PSObj_start_utterance(PSObj *self) {
+    PyObject *result = NULL;
+    ps_decoder_t * ps = get_ps_decoder_t(self);
+
+    if (ps == NULL)
+	return NULL;
+    int r = ps_start_utt(ps);
+    if (r == 0) {
+	Py_INCREF(Py_None);
+	result = Py_None;
+    } else
+        PyErr_Format(PocketSphinxError,	"Failed to start utterance. "
+		     "Got '%d' from ps_start_utt.", r);
+    return result;
+}
+
+static PyObject *
+PSObj_end_utterance(PSObj *self) {
+    PyObject *result = NULL;
+    ps_decoder_t * ps = get_ps_decoder_t(self);
+
+    if (ps == NULL)
+	return NULL;
+    
+    int r = ps_end_utt(ps);
+    if (r == 0) {
+	Py_INCREF(Py_None);
+	result = Py_None;
+    } else
+        PyErr_Format(PocketSphinxError,	"Failed to end utterance. "
+		     "Got '%d' from ps_end_utt.", r);
+    return result;
+}
+
+static PyObject *
+PSObj_read_and_process_audio(PSObj *self) {
+    ps_decoder_t * ps = get_ps_decoder_t(self);
+
+    if (ps == NULL)
+	return NULL;
+    
+    // Init audio device if necessary
+    if (self->ad == NULL) {
+	PSObj_open_audio_device(self);
+	if (self->ad == NULL)
+	    return NULL;
+    }
+    
+    
+    ad_rec_t *ad = self->ad;
+    int16 adbuf[2048];
+    int32 k = ad_read(ad, adbuf, 2048);
+    if (k < 0) {
+	PyErr_SetString(PocketSphinxError, "Failed to read audio");
+	return NULL;
+    }
+
+    return Py_BuildValue("i", ps_process_raw(ps, adbuf, k, FALSE, FALSE));
+}
+
+static PyObject *
 PSObj_recognize_from_microphone(PSObj *self) {
     ps_decoder_t * ps = get_ps_decoder_t(self);
     
@@ -79,7 +183,7 @@ PSObj_recognize_from_microphone(PSObj *self) {
         if (!in_speech && utt_started) {
             /* speech -> silence transition, time to start new utterance  */
             ps_end_utt(ps);
-            hyp = ps_get_hyp(ps, NULL );
+            hyp = ps_get_hyp(ps, NULL);
             if (hyp != NULL) {
                 printf("%s\n", hyp);
 	    }
@@ -95,9 +199,21 @@ PSObj_recognize_from_microphone(PSObj *self) {
 
 
 static PyMethodDef PSObj_methods[] = {
-    {"recognize_from_microphone",
-     (PyCFunction)PSObj_recognize_from_microphone, METH_NOARGS,
-     PyDoc_STR("Recognize speech from the microphone")},
+    {"open_audio_device",
+     (PyCFunction)PSObj_open_audio_device, METH_NOARGS,
+     PyDoc_STR("Open the audio device for recording speech.")},
+    {"close_audio_device",
+     (PyCFunction)PSObj_close_audio_device, METH_NOARGS,
+     PyDoc_STR("If it's open, close the audio device used to record speech.")},
+    {"start_utterance",
+     (PyCFunction)PSObj_start_utterance, METH_NOARGS,
+     PyDoc_STR("Call this function before passing any utterance data.")},
+    {"end_utterance",
+     (PyCFunction)PSObj_end_utterance, METH_NOARGS,
+     PyDoc_STR("Call this function to end utterance processing.")},
+    {"read_and_process_audio",
+     (PyCFunction)PSObj_read_and_process_audio, METH_NOARGS,
+     PyDoc_STR("Read and process audio.")},
     {NULL}  /* Sentinel */
 };
 
@@ -124,6 +240,10 @@ PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->ps_capsule = Py_None;
         Py_INCREF(Py_None);
         self->config_capsule = Py_None;
+
+	// Ensure the 'ad' member used in init_mic_recording
+	// and read_and_process_audio in set to NULL for now.
+	self->ad = NULL;
     }
 
     return (PyObject *)self;
@@ -145,6 +265,11 @@ PSObj_dealloc(PSObj* self) {
     if (ps != NULL)
 	ps_free(ps);
     Py_XDECREF(self->ps_capsule);
+
+    // Close the audio device if it's open
+    ad_rec_t *ad = self->ad;
+    if (ad != NULL)
+	ad_close(ad);
 
     // Finally free the PSObj itself
     Py_TYPE(self)->tp_free((PyObject*)self);
@@ -289,7 +414,6 @@ PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure) {
 
     return 0;
 }
-
 
 static PyGetSetDef PSObj_getseters[] = {
     {"test_callback",
