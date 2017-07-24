@@ -24,13 +24,17 @@ typedef struct {
     PyObject *hypothesis_callback; // callable
     PyObject *test_callback; // callable
     ad_rec_t *ad; // Used for recording audio
+    // whether or not pocket sphinx detected an utterance in audio input
+    // used in 'read_and_process_audio' method
+    bool utterance_started;
+    int16 adbuf[2048]; // array used to store audio read from audio devices
 } PSObj;
 
 static PyObject *
 PSObj_recognize_from_microphone(PSObj *self);
 
 static PyObject *
-PSObj_open_audio_device(PSObj *self);
+PSObj_open_rec_from_audio_device(PSObj *self);
 
 static PyObject *
 PSObj_close_audio_device(PSObj *self);
@@ -73,6 +77,13 @@ PSObj_get_hypothesis_callback(PSObj *self, void *closure);
 
 static PyObject *
 PSObj_get_in_speech(PSObj *self, void *closure);
+
+/* Checks the argument count of a callable Python object and returns true
+ * if it matches arg_count, or returns false if it doesn't and sets a 
+ * Python exception.
+ */
+static bool
+assert_callable_arg_count(PyObject *value, const unsigned int arg_count);
 
 static int
 PSObj_set_test_callback(PSObj *self, PyObject *value, void *closure);

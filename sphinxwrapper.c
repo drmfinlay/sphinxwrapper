@@ -33,7 +33,7 @@ static const arg_t cont_args_def[] = {
 };
 
 static PyObject *
-PSObj_open_audio_device(PSObj *self) {
+PSObj_open_rec_from_audio_device(PSObj *self) {
     ps_decoder_t * ps = get_ps_decoder_t(self);
 
     if (ps == NULL)
@@ -61,6 +61,9 @@ PSObj_open_audio_device(PSObj *self) {
 			"Failed to start recording.");
 	return NULL;
     }
+
+    self->utterance_started = false;
+    printf("READY....\n");
     
     Py_INCREF(Py_None);
     return Py_None;
@@ -117,88 +120,71 @@ PSObj_read_and_process_audio(PSObj *self) {
     if (ps == NULL)
 	return NULL;
     
-    // Init audio device if necessary
+    // Open and record from audio device if necessary
     if (self->ad == NULL) {
-	PSObj_open_audio_device(self);
+	PSObj_open_rec_from_audio_device(self);
 	if (self->ad == NULL)
 	    return NULL;
     }
     
-    
-    ad_rec_t *ad = self->ad;
-    int16 adbuf[2048];
-    int32 k = ad_read(ad, adbuf, 2048);
-    if (k < 0) {
-	PyErr_SetString(PocketSphinxError, "Failed to read audio");
-	return NULL;
-    }
-
-    return Py_BuildValue("i", ps_process_raw(ps, adbuf, k, FALSE, FALSE));
-}
-
-static PyObject *
-PSObj_recognize_from_microphone(PSObj *self) {
-    ps_decoder_t * ps = get_ps_decoder_t(self);
-    
-    if (ps == NULL) {
-	E_ERROR("Pocket Sphinx was not initialised. Have you called 'ps_init()'?\n");
-	return NULL;
-    }
-    
-    ad_rec_t *ad;
-    int16 adbuf[2048];
-    uint8 utt_started, in_speech;
-    int32 k;
+    uint8 in_speech;
+    int32 k = ad_read(self->ad, self->adbuf, 2048);
     char const *hyp;
-    const char *mic_dev = cmd_ln_str_r(self->config, "-adcdev");
-
-    // Doesn't matter if dev is NULL; ad_open_dev will use the
-    // defined default device.
-    ad = ad_open_dev(mic_dev, 16000);
-    if (ad == NULL)
-        E_FATAL("Failed to open audio device\n");
-    if (ad_start_rec(ad) < 0)
-        E_FATAL("Failed to start recording\n");
-    
-    if (ps_start_utt(ps) < 0)
-        E_FATAL("Failed to start utterance\n");
-    utt_started = FALSE;
-    printf("READY....\n");
-    
-    // TODO We need to be able to call ps_reinit from Python
-    // so that the recognizer updates itself with new configuration
-    // such as an updated acoustic model, dictionary or grammar files.
-    for (;;) {
-        if ((k = ad_read(ad, adbuf, 2048)) < 0)
-            E_FATAL("Failed to read audio\n");
-        ps_process_raw(ps, adbuf, k, FALSE, FALSE);
-        in_speech = ps_get_in_speech(ps);
-        if (in_speech && !utt_started) {
-            utt_started = TRUE;
-            printf("Listening...\n");
-        }
-        if (!in_speech && utt_started) {
-            /* speech -> silence transition, time to start new utterance  */
-            ps_end_utt(ps);
-            hyp = ps_get_hyp(ps, NULL);
-            if (hyp != NULL) {
-                printf("%s\n", hyp);
-	    }
-            
-            if (ps_start_utt(ps) < 0)
-                E_FATAL("Failed to start utterance\n");
-            utt_started = FALSE;
-            printf("READY....\n");
-        }
+    if (k < 0) {
+	PyErr_SetString(PocketSphinxError, "Failed to read audio.");
+	self->ad = NULL;
+	ps_end_utt(ps);
+	return NULL;
     }
-    ad_close(ad);
-}
 
+    // Set the result to None for now in the case where there is no
+    // hypothesis
+    Py_INCREF(Py_None);
+    PyObject *result = Py_None;
+    
+    ps_process_raw(ps, self->adbuf, k, FALSE, FALSE);
+    
+    in_speech = ps_get_in_speech(ps);
+    bool utt_started = self->utterance_started;
+    
+    if (in_speech && !utt_started) {
+	self->utterance_started = true;
+	printf("Listening...\n");
+    }
+
+    if (!in_speech && utt_started) {
+	/* speech -> silence transition, time to start new utterance  */
+	ps_end_utt(ps);
+	hyp = ps_get_hyp(ps, NULL);
+	if (hyp != NULL) {
+	    // Call the Python hypothesis callback if it is callable
+	    // It should have the correct number of arguments because
+	    // of the checks in set_hypothesis_callback
+	    PyObject *callback = self->hypothesis_callback;
+	    if (PyCallable_Check(callback)) {
+		PyObject *args = Py_BuildValue("(s)", hyp);
+		result = PyObject_CallObject(callback, args);
+
+		// Decrease the ref count of None set earlier
+		Py_DECREF(Py_None);
+	    }
+	}
+	
+	if (ps_start_utt(ps) < 0) {
+	    PyErr_SetString(PocketSphinxError, "Failed to start "
+			    "utterance.");
+	    return NULL;
+	}
+	self->utterance_started = false;
+    }
+
+    return result;
+}
 
 static PyMethodDef PSObj_methods[] = {
-    {"open_audio_device",
-     (PyCFunction)PSObj_open_audio_device, METH_NOARGS,
-     PyDoc_STR("Open the audio device for recording speech.")},
+    {"open_rec_from_audio_device",
+     (PyCFunction)PSObj_open_rec_from_audio_device, METH_NOARGS,
+     PyDoc_STR("Open the audio device for recording speech and start recording.")},
     {"close_audio_device",
      (PyCFunction)PSObj_close_audio_device, METH_NOARGS,
      PyDoc_STR("If it's open, close the audio device used to record speech.")},
@@ -239,6 +225,7 @@ PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	// Ensure the 'ad' member used in init_mic_recording
 	// and read_and_process_audio in set to NULL for now.
 	self->ad = NULL;
+	self->utterance_started = false;
     }
 
     return (PyObject *)self;
@@ -362,18 +349,49 @@ PSObj_get_in_speech(PSObj *self, void *closure) {
     return result;
 }
 
+static bool
+assert_callable_arg_count(PyObject *value, const unsigned int arg_count) {
+    int count = -1;
+    bool result = true;
+    PyObject* fc = PyObject_GetAttrString(value, "func_code");
+    if(fc) {
+	PyObject* ac = PyObject_GetAttrString(fc, "co_argcount");
+	if(ac) {
+	    count = PyInt_AsLong(ac);
+	    Py_DECREF(ac);
+	}
+	Py_DECREF(fc);
+    }
+
+    const char *arg_or_args;
+    if (arg_count == 1) arg_or_args = "argument";
+    else arg_or_args = "arguments";
+
+    if (count != arg_count) {
+	PyErr_Format(PyExc_TypeError, "callable must have %d %s.",
+		     arg_count, arg_or_args);
+	result = false;
+    }
+    
+    return result;
+}
+
 static int
 PSObj_set_test_callback(PSObj *self, PyObject *value, void *closure) {
     if (value == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Cannot delete the test_callback attribute");
+        PyErr_SetString(PyExc_TypeError, "Cannot delete the test_callback "
+			"attribute.");
         return -1;
     }
 
     if (!PyCallable_Check(value)) {
-	PyErr_SetString(PyExc_TypeError, "value must be callable");
+	PyErr_SetString(PyExc_TypeError, "value must be callable.");
 	return -1;
     }
-    
+
+    if (!assert_callable_arg_count(value, 1))
+	return -1;
+
     Py_DECREF(self->test_callback);
     Py_INCREF(value);
     self->test_callback = value;
@@ -384,14 +402,18 @@ PSObj_set_test_callback(PSObj *self, PyObject *value, void *closure) {
 static int
 PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure) {
     if (value == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Cannot delete the hypothesis_callback attribute");
+        PyErr_SetString(PyExc_TypeError, "Cannot delete the "
+			"hypothesis_callback attribute.");
         return -1;
     }
 
     if (!PyCallable_Check(value)) {
-	PyErr_SetString(PyExc_TypeError, "value must be callable");
+	PyErr_SetString(PyExc_TypeError, "value must be callable.");
 	return -1;
     }
+
+    if (!assert_callable_arg_count(value, 1))
+	return -1;
     
     Py_DECREF(self->hypothesis_callback);
     Py_INCREF(value);
