@@ -20,7 +20,7 @@ $ sudo apt install pocketsphinx sphinxbase-utils
 
 ### Compiling dependencies from source
 If the dependencies aren't available from your system's package management system, you can download and 
-compile the sources from repositories linked above and follow the instructions there.
+compile the sources from the repositories linked above and follow the instructions there.
 
 
 ## Install the sphinxwrapper Python Extension
