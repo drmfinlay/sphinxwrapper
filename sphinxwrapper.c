@@ -76,6 +76,9 @@ PSObj_close_audio_device(PSObj *self) {
 	ad_close(ad);
 	self->ad = NULL;
     }
+    
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 static PyObject *

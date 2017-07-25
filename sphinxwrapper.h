@@ -31,9 +31,6 @@ typedef struct {
 } PSObj;
 
 static PyObject *
-PSObj_recognize_from_microphone(PSObj *self);
-
-static PyObject *
 PSObj_open_rec_from_audio_device(PSObj *self);
 
 static PyObject *
