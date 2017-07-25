@@ -280,17 +280,14 @@ PSObj_init(PSObj *self, PyObject *args, PyObject *kwds) {
     Py_ssize_t list_size;
 
     static char *kwlist[] = {"ps_args", NULL};
-
-    if (! PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &ps_args))
+    
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, &ps_args))
         return -1;
 
     if (ps_args) {
 	if (!PyList_Check(ps_args)) {
 	    // Raise the exception flag and return -1
             PyErr_SetString(PyExc_TypeError, "parameter must be a list");
-	    return -1;
-	} else if (PyList_Size(ps_args) < 1) {
-            PyErr_SetString(PyExc_IndexError, "list must have at least 1 item");
 	    return -1;
 	}
         
@@ -312,6 +309,14 @@ PSObj_init(PSObj *self, PyObject *args, PyObject *kwds) {
 	if (!init_ps_decoder_with_args(self, list_size, strings)) {
 	    PyErr_SetString(PocketSphinxError, "PocketSphinx couldn't be initialised. "
 			    "Is your configuration right?");
+	    return -1;
+	}
+    } else {
+	// Let Pocket Sphinx use the default configuration if there aren't any arguments
+	char *strings[0];
+	if (!init_ps_decoder_with_args(self, 0, strings)) {
+	    PyErr_SetString(PocketSphinxError, "PocketSphinx couldn't be initialised "
+			    "using the default configuration. Is it installed properly?");
 	    return -1;
 	}
     }
