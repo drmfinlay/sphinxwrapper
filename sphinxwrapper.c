@@ -287,7 +287,7 @@ PSObj_init(PSObj *self, PyObject *args, PyObject *kwds) {
     if (! PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, &ps_args))
         return -1;
 
-    if (ps_args) {
+    if (ps_args && ps_args != Py_None) {
 	if (!PyList_Check(ps_args)) {
 	    // Raise the exception flag and return -1
             PyErr_SetString(PyExc_TypeError, "parameter must be a list");
