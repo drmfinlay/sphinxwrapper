@@ -221,6 +221,11 @@ PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         Py_INCREF(Py_None);
         self->hypothesis_callback = Py_None;
 
+	// Set jsgf_info to (None, None)
+        Py_INCREF(Py_None);
+        Py_INCREF(Py_None);
+	self->jsgf_info = Py_BuildValue("(O,O)", Py_None, Py_None);
+	
 	// Ensure pointer members are NULL
         self->ps = NULL;
         self->config = NULL;
@@ -357,6 +362,12 @@ PSObj_get_in_speech(PSObj *self, void *closure) {
     return result;
 }
 
+static PyObject *
+PSObj_get_jsgf_info(PSObj *self, void *closure) {
+    Py_INCREF(self->jsgf_info);
+    return self->jsgf_info;
+}
+
 static bool
 assert_callable_arg_count(PyObject *value, const unsigned int arg_count) {
     int count = -1;
@@ -430,13 +441,64 @@ PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure) {
     return 0;
 }
 
+static int
+PSObj_set_jsgf_info(PSObj *self, PyObject *value, void *closure) {
+    if (value == NULL) {
+        PyErr_SetString(PyExc_AttributeError, "Cannot delete the "
+			"jsgf_info attribute.");
+        return -1;
+    }
+
+    if (!PyTuple_Check(value) || PyTuple_Size(value) != (Py_ssize_t)2) {
+        PyErr_SetString(PyExc_TypeError, "value must be a tuple of "
+			"length 2.");
+	return -1;
+    }
+
+    PyObject *name = PyTuple_GetItem(value, (Py_ssize_t)0);
+    PyObject *jsgf_str = PyTuple_GetItem(value, (Py_ssize_t)1);
+    
+    if (!PyString_Check(name) || !PyString_Check(jsgf_str)) {
+        PyErr_SetString(PyExc_TypeError, "both objects in the tuple "
+			"must be strings: a name and a JSGF grammar "
+			"string.");
+	return -1;
+    }
+    
+    ps_decoder_t * ps = get_ps_decoder_t(self);
+
+    ps_unset_search(ps, PyString_AsString(name));
+
+    // Set the value using ps_set_jsgf_string
+    if (ps_set_jsgf_string(ps, PyString_AsString(name),
+			   PyString_AsString(jsgf_str)) == -1) {
+	PyErr_SetString(PocketSphinxError, "Something went wrong when "
+			"setting JSGF grammar name and/or string. "
+			"Please check for syntax or semantic errors.");
+	return -1;
+    }
+    
+    Py_INCREF(value);
+    self->jsgf_info = value;
+
+    return 0;
+}
+
 static PyGetSetDef PSObj_getseters[] = {
     {"test_callback",
      (getter)PSObj_get_test_callback, (setter)PSObj_set_test_callback,
      "Test callback", NULL},
     {"hypothesis_callback",
      (getter)PSObj_get_hypothesis_callback, (setter)PSObj_set_hypothesis_callback,
-     "Hypothesis callback", NULL},
+     "Hypothesis callback called with Pocket Sphinx's hypothesis for "
+     "what was said.", NULL},
+    {"jsgf_info",
+     (getter)PSObj_get_jsgf_info,
+     (setter)PSObj_set_jsgf_info,
+     "Java Speech Grammar Format information used by Pocket Sphinx "
+     "to set up recogniser to recognise JSGF rules in speech.\n"
+     "Requires a tuple containing 2 strings: a name and a valid JSGF "
+     "grammar.", NULL},
     {"in_speech",
      (getter)PSObj_get_in_speech, NULL, // No setter. AttributeError is thrown on set attempt.
      // From pocketsphinx.h:
