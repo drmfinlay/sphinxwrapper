@@ -93,7 +93,7 @@ static int
 PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure);
 
 static int
-PSObj_set_jsgf_string(PSObj *self, PyObject *value, void *closure);
+PSObj_set_jsgf_info(PSObj *self, PyObject *value, void *closure);
 
 /*
  * Initialise a Pocket Sphinx decoder with arguments.
