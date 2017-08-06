@@ -225,10 +225,10 @@ PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         Py_INCREF(Py_None);
         self->hypothesis_callback = Py_None;
 
-	// Set jsgf_info to (None, None)
+	// Set jsgf to (None, None)
         Py_INCREF(Py_None);
         Py_INCREF(Py_None);
-	self->jsgf_info = Py_BuildValue("(O,O)", Py_None, Py_None);
+	self->jsgf = Py_BuildValue("(O,O)", Py_None, Py_None);
 	
 	// Ensure pointer members are NULL
         self->ps = NULL;
@@ -367,9 +367,9 @@ PSObj_get_in_speech(PSObj *self, void *closure) {
 }
 
 static PyObject *
-PSObj_get_jsgf_info(PSObj *self, void *closure) {
-    Py_INCREF(self->jsgf_info);
-    return self->jsgf_info;
+PSObj_get_jsgf(PSObj *self, void *closure) {
+    Py_INCREF(self->jsgf);
+    return self->jsgf;
 }
 
 static bool
@@ -446,10 +446,10 @@ PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure) {
 }
 
 static int
-PSObj_set_jsgf_info(PSObj *self, PyObject *value, void *closure) {
+PSObj_set_jsgf(PSObj *self, PyObject *value, void *closure) {
     if (value == NULL) {
         PyErr_SetString(PyExc_AttributeError, "Cannot delete the "
-			"jsgf_info attribute.");
+			"jsgf attribute.");
         return -1;
     }
 
@@ -483,7 +483,7 @@ PSObj_set_jsgf_info(PSObj *self, PyObject *value, void *closure) {
     }
     
     Py_INCREF(value);
-    self->jsgf_info = value;
+    self->jsgf = value;
 
     return 0;
 }
@@ -498,9 +498,9 @@ static PyGetSetDef PSObj_getseters[] = {
      (setter)PSObj_set_hypothesis_callback,
      "Hypothesis callback called with Pocket Sphinx's hypothesis for "
      "what was said.", NULL},
-    {"jsgf_info",
-     (getter)PSObj_get_jsgf_info,
-     (setter)PSObj_set_jsgf_info,
+    {"jsgf",
+     (getter)PSObj_get_jsgf,
+     (setter)PSObj_set_jsgf,
      "Java Speech Grammar Format information used by Pocket Sphinx "
      "to set up recogniser to recognise JSGF rules in speech.\n"
      "Requires a tuple containing 2 strings: a name and a valid JSGF "
