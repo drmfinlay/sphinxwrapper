@@ -470,8 +470,8 @@ PSObj_set_jsgf_info(PSObj *self, PyObject *value, void *closure) {
     }
     
     ps_decoder_t * ps = get_ps_decoder_t(self);
-
-    ps_unset_search(ps, PyString_AsString(name));
+    if (ps == NULL)
+	return -1;
 
     // Set the value using ps_set_jsgf_string
     if (ps_set_jsgf_string(ps, PyString_AsString(name),
@@ -578,8 +578,12 @@ init_ps_decoder_with_args(PSObj *self, int argc, char *argv[]) {
     
     // Set a pointer to the new decoder used only in C.
     self->ps = ps;
+
+    // Retain the config for later use.
+    // This claims ownership of the config struct.
+    config = cmd_ln_retain(config);
     
-    // Set a pointer to the config for later use
+    // Set a pointer to the config
     self->config = config;
 
     return true;
