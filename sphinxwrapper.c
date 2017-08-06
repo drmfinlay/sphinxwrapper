@@ -139,11 +139,6 @@ PSObj_read_and_process_audio(PSObj *self) {
 	ps_end_utt(ps);
 	return NULL;
     }
-
-    // Set the result to None for now in the case where there is no
-    // hypothesis
-    Py_INCREF(Py_None);
-    PyObject *result = Py_None;
     
     ps_process_raw(ps, self->adbuf, k, FALSE, FALSE);
     
@@ -164,18 +159,21 @@ PSObj_read_and_process_audio(PSObj *self) {
 	/* speech -> silence transition, time to start new utterance  */
 	ps_end_utt(ps);
 	hyp = ps_get_hyp(ps, NULL);
-	if (hyp != NULL) {
-	    // Call the Python hypothesis callback if it is callable
-	    // It should have the correct number of arguments because
-	    // of the checks in set_hypothesis_callback
-	    PyObject *callback = self->hypothesis_callback;
-	    if (PyCallable_Check(callback)) {
-		PyObject *args = Py_BuildValue("(s)", hyp);
-		result = PyObject_CallObject(callback, args);
-
-		// Decrease the ref count of None set earlier
-		Py_DECREF(Py_None);
+	
+	// Call the Python hypothesis callback if it is callable
+	// It should have the correct number of arguments because
+	// of the checks in set_hypothesis_callback
+	PyObject *callback = self->hypothesis_callback;
+	if (PyCallable_Check(callback)) {
+	    PyObject *args;
+	    if (hyp != NULL) {
+		args = Py_BuildValue("(s)", hyp);
+	    } else {
+		Py_INCREF(Py_None);
+		args = Py_BuildValue("(O)", Py_None);
 	    }
+	    
+	    PyObject_CallObject(callback, args);
 	}
 	
 	if (ps_start_utt(ps) < 0) {
@@ -186,7 +184,8 @@ PSObj_read_and_process_audio(PSObj *self) {
 	self->utterance_started = false;
     }
 
-    return result;
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 static PyMethodDef PSObj_methods[] = {
