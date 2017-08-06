@@ -22,7 +22,7 @@ typedef struct {
     ps_decoder_t *ps; // pocketsphinx decoder pointer
     cmd_ln_t * config; // sphinxbase commandline config struct pointer
     PyObject *hypothesis_callback; // callable
-    PyObject *test_callback; // callable
+    PyObject *speech_start_callback; // callable
     PyObject *jsgf_info; // length 2 tuple of 2 strings: (name, jsgf_str)
     ad_rec_t *ad; // Used for recording audio
     // whether or not pocket sphinx detected an utterance in audio input
@@ -68,7 +68,7 @@ static int
 PSObj_init(PSObj *self, PyObject *args, PyObject *kwds);
 
 static PyObject *
-PSObj_get_test_callback(PSObj *self, void *closure);
+PSObj_get_in_speech_callback(PSObj *self, void *closure);
 
 static PyObject *
 PSObj_get_hypothesis_callback(PSObj *self, void *closure);
@@ -87,7 +87,7 @@ static bool
 assert_callable_arg_count(PyObject *value, const unsigned int arg_count);
 
 static int
-PSObj_set_test_callback(PSObj *self, PyObject *value, void *closure);
+PSObj_set_in_speech_callback(PSObj *self, PyObject *value, void *closure);
 
 static int
 PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure);

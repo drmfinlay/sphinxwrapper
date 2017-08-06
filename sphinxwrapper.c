@@ -152,7 +152,12 @@ PSObj_read_and_process_audio(PSObj *self) {
     
     if (in_speech && !utt_started) {
 	self->utterance_started = true;
-	printf("Listening...\n");
+	
+	// Call speech_start callback
+	PyObject *callback = self->speech_start_callback;
+	if (PyCallable_Check(callback)) {
+	    PyObject_CallObject(callback, NULL); // no args required.
+	}
     }
 
     if (!in_speech && utt_started) {
@@ -217,7 +222,7 @@ PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	// Set the callbacks to None initially
 	// TODO Set to a lambda like 'lambda x : None' instead?
         Py_INCREF(Py_None);
-        self->test_callback = Py_None;
+        self->speech_start_callback = Py_None;
         Py_INCREF(Py_None);
         self->hypothesis_callback = Py_None;
 
@@ -242,7 +247,7 @@ PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 static void
 PSObj_dealloc(PSObj* self) {
     Py_XDECREF(self->hypothesis_callback);
-    Py_XDECREF(self->test_callback);
+    Py_XDECREF(self->speech_start_callback);
     
     // Deallocate the config object
     cmd_ln_t *config = self->config;
@@ -333,9 +338,9 @@ PSObj_init(PSObj *self, PyObject *args, PyObject *kwds) {
 }
 
 static PyObject *
-PSObj_get_test_callback(PSObj *self, void *closure) {
-    Py_INCREF(self->test_callback);
-    return self->test_callback;
+PSObj_get_speech_start_callback(PSObj *self, void *closure) {
+    Py_INCREF(self->speech_start_callback);
+    return self->speech_start_callback;
 }
 
 static PyObject *
@@ -396,9 +401,9 @@ assert_callable_arg_count(PyObject *value, const unsigned int arg_count) {
 }
 
 static int
-PSObj_set_test_callback(PSObj *self, PyObject *value, void *closure) {
+PSObj_set_speech_start_callback(PSObj *self, PyObject *value, void *closure) {
     if (value == NULL) {
-        PyErr_SetString(PyExc_AttributeError, "Cannot delete the test_callback "
+        PyErr_SetString(PyExc_AttributeError, "Cannot delete the speech_start_callback "
 			"attribute.");
         return -1;
     }
@@ -408,12 +413,12 @@ PSObj_set_test_callback(PSObj *self, PyObject *value, void *closure) {
 	return -1;
     }
 
-    if (!assert_callable_arg_count(value, 1))
+    if (!assert_callable_arg_count(value, 0))
 	return -1;
 
-    Py_DECREF(self->test_callback);
+    Py_DECREF(self->speech_start_callback);
     Py_INCREF(value);
-    self->test_callback = value;
+    self->speech_start_callback = value;
 
     return 0;
 }
@@ -485,11 +490,13 @@ PSObj_set_jsgf_info(PSObj *self, PyObject *value, void *closure) {
 }
 
 static PyGetSetDef PSObj_getseters[] = {
-    {"test_callback",
-     (getter)PSObj_get_test_callback, (setter)PSObj_set_test_callback,
-     "Test callback", NULL},
+    {"speech_start_callback",
+     (getter)PSObj_get_speech_start_callback,
+     (setter)PSObj_set_speech_start_callback,
+     "Callable object called when speech started.", NULL},
     {"hypothesis_callback",
-     (getter)PSObj_get_hypothesis_callback, (setter)PSObj_set_hypothesis_callback,
+     (getter)PSObj_get_hypothesis_callback,
+     (setter)PSObj_set_hypothesis_callback,
      "Hypothesis callback called with Pocket Sphinx's hypothesis for "
      "what was said.", NULL},
     {"jsgf_info",
