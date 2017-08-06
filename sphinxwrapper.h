@@ -68,7 +68,7 @@ static int
 PSObj_init(PSObj *self, PyObject *args, PyObject *kwds);
 
 static PyObject *
-PSObj_get_in_speech_callback(PSObj *self, void *closure);
+PSObj_get_speech_start_callback(PSObj *self, void *closure);
 
 static PyObject *
 PSObj_get_hypothesis_callback(PSObj *self, void *closure);
@@ -87,7 +87,7 @@ static bool
 assert_callable_arg_count(PyObject *value, const unsigned int arg_count);
 
 static int
-PSObj_set_in_speech_callback(PSObj *self, PyObject *value, void *closure);
+PSObj_set_speech_start_callback(PSObj *self, PyObject *value, void *closure);
 
 static int
 PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure);
