@@ -23,7 +23,7 @@ typedef struct {
     cmd_ln_t * config; // sphinxbase commandline config struct pointer
     PyObject *hypothesis_callback; // callable
     PyObject *speech_start_callback; // callable
-    PyObject *jsgf; // length 2 tuple of 2 strings: (name, jsgf_str)
+    PyObject *jsgf_str; // python string containing JSGF grammar
     ad_rec_t *ad; // Used for recording audio
     // whether or not pocket sphinx detected an utterance in audio input
     // used in 'read_and_process_audio' method
@@ -77,7 +77,7 @@ static PyObject *
 PSObj_get_in_speech(PSObj *self, void *closure);
 
 static PyObject *
-PSObj_get_jsgf(PSObj *self, void *closure);
+PSObj_get_jsgf_str(PSObj *self, void *closure);
 
 /* Checks the argument count of a callable Python object and returns true
  * if it matches arg_count, or returns false if it doesn't and sets a 
@@ -93,7 +93,7 @@ static int
 PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure);
 
 static int
-PSObj_set_jsgf(PSObj *self, PyObject *value, void *closure);
+PSObj_set_jsgf_str(PSObj *self, PyObject *value, void *closure);
 
 /*
  * Initialise a Pocket Sphinx decoder with arguments.
