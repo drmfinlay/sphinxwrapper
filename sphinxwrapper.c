@@ -387,7 +387,7 @@ assert_callable_arg_count(PyObject *value, const unsigned int arg_count) {
 static int
 PSObj_set_test_callback(PSObj *self, PyObject *value, void *closure) {
     if (value == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Cannot delete the test_callback "
+        PyErr_SetString(PyExc_AttributeError, "Cannot delete the test_callback "
 			"attribute.");
         return -1;
     }
@@ -410,7 +410,7 @@ PSObj_set_test_callback(PSObj *self, PyObject *value, void *closure) {
 static int
 PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure) {
     if (value == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Cannot delete the "
+        PyErr_SetString(PyExc_AttributeError, "Cannot delete the "
 			"hypothesis_callback attribute.");
         return -1;
     }
