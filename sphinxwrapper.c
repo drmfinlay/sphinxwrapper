@@ -190,6 +190,39 @@ PSObj_read_and_process_audio(PSObj *self) {
     return Py_None;
 }
 
+static PyObject *
+PSObj_set_jsgf_search(PSObj *self, PyObject *args, PyObject *kwds) {
+    const char *name = NULL;
+    const char *jsgf_str;
+    static char *kwlist[] = {"jsgf_str", "name", NULL};
+    
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|s", kwlist, &jsgf_str, &name))
+        return NULL;
+
+    if (!name)
+	name = PS_DEFAULT_SEARCH;
+    
+    ps_decoder_t * ps = get_ps_decoder_t(self);
+    if (ps == NULL)
+	return NULL;
+
+    // Set the value using ps_set_jsgf_string
+    if (ps_set_jsgf_string(ps, name, jsgf_str) < 0 ||
+	ps_set_search(ps, PS_DEFAULT_SEARCH) < 0) {
+	PyErr_SetString(PocketSphinxError, "Something went wrong while "
+			"setting the JSGF grammar string. Please check "
+			"for syntax or semantic errors.");
+	return NULL;
+    }
+
+    Py_XDECREF(self->search_name);
+    self->search_name = Py_BuildValue("s", name);
+    Py_INCREF(self->search_name);
+
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
 static PyMethodDef PSObj_methods[] = {
     {"open_rec_from_audio_device",
      (PyCFunction)PSObj_open_rec_from_audio_device, METH_NOARGS,
@@ -206,6 +239,11 @@ static PyMethodDef PSObj_methods[] = {
     {"read_and_process_audio",
      (PyCFunction)PSObj_read_and_process_audio, METH_NOARGS,
      PyDoc_STR("Read and process audio.")},
+    {"set_jsgf_search",
+     (PyCFunction)PSObj_set_jsgf_search, METH_KEYWORDS,
+     PyDoc_STR("Set the Java Speech Grammar Format grammar string and the name to "
+	       "use for the Pocket Sphinx search.\n Setting an old search name "
+	       "will replace that search.")},
     {NULL}  /* Sentinel */
 };
 
@@ -227,11 +265,8 @@ PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         Py_INCREF(Py_None);
         self->hypothesis_callback = Py_None;
 
-	// Set jsgf_str to None
-	// TODO Set to the contents of the initial grammar file
-	// instead?
         Py_INCREF(Py_None);
-	self->jsgf_str = Py_None;
+        self->search_name = Py_None;
 	
 	// Ensure pointer members are NULL
         self->ps = NULL;
@@ -250,6 +285,7 @@ static void
 PSObj_dealloc(PSObj* self) {
     Py_XDECREF(self->hypothesis_callback);
     Py_XDECREF(self->speech_start_callback);
+    Py_XDECREF(self->search_name);
     
     // Deallocate the config object
     cmd_ln_t *config = self->config;
@@ -370,9 +406,9 @@ PSObj_get_in_speech(PSObj *self, void *closure) {
 }
 
 static PyObject *
-PSObj_get_jsgf_str(PSObj *self, void *closure) {
-    Py_INCREF(self->jsgf_str);
-    return self->jsgf_str;
+PSObj_get_search_name(PSObj *self, void *closure) {
+    Py_INCREF(self->search_name);
+    return self->search_name;
 }
 
 static bool
@@ -448,39 +484,6 @@ PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure) {
     return 0;
 }
 
-static int
-PSObj_set_jsgf_str(PSObj *self, PyObject *value, void *closure) {
-    if (value == NULL) {
-        PyErr_SetString(PyExc_AttributeError, "Cannot delete the "
-			"jsgf_str attribute.");
-        return -1;
-    }
-    
-    if (!PyString_Check(value)) {
-        PyErr_SetString(PyExc_TypeError, "value must be a string");
-	return -1;
-    }
-    
-    ps_decoder_t * ps = get_ps_decoder_t(self);
-    if (ps == NULL)
-	return -1;
-
-    // Set the value using ps_set_jsgf_string
-    if (ps_set_jsgf_string(ps, PS_DEFAULT_SEARCH,
-			   PyString_AsString(value)) < 0 ||
-	ps_set_search(ps, PS_DEFAULT_SEARCH) < 0) {
-	PyErr_SetString(PocketSphinxError, "Something went wrong while "
-			"setting the JSGF grammar string. Please check "
-			"for syntax or semantic errors.");
-	return -1;
-    }
-    
-    Py_INCREF(value);
-    self->jsgf_str = value;
-
-    return 0;
-}
-
 static PyGetSetDef PSObj_getseters[] = {
     {"speech_start_callback",
      (getter)PSObj_get_speech_start_callback,
@@ -491,16 +494,13 @@ static PyGetSetDef PSObj_getseters[] = {
      (setter)PSObj_set_hypothesis_callback,
      "Hypothesis callback called with Pocket Sphinx's hypothesis for "
      "what was said.", NULL},
-    {"jsgf_str",
-     (getter)PSObj_get_jsgf_str,
-     (setter)PSObj_set_jsgf_str,
-     "Java Speech Grammar Format grammar string used by Pocket Sphinx "
-     "to set up a recognition of JSGF rules in speech.\n"
-     "Set value should be a valid JSGF grammar string.", NULL},
     {"in_speech",
      (getter)PSObj_get_in_speech, NULL, // No setter. AttributeError is thrown on set attempt.
      // From pocketsphinx.h:
      "Checks if the last feed audio buffer contained speech", NULL},
+    {"search_name",
+     (getter)PSObj_get_search_name, NULL,
+     "Get the current pocket sphinx search name.", NULL},
     {NULL}  /* Sentinel */
 };
 
@@ -577,6 +577,16 @@ init_ps_decoder_with_args(PSObj *self, int argc, char *argv[]) {
     
     // Set a pointer to the config
     self->config = config;
+
+    // Set self->search_name
+    const char *name = ps_get_search(ps);
+    Py_XDECREF(self->search_name);
+    if (!name) {
+	self->search_name = Py_None;
+    } else {
+	self->search_name = Py_BuildValue("s", name);
+    }
+    Py_INCREF(self->search_name);
 
     return true;
 }
