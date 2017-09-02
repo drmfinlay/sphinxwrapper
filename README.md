@@ -1,16 +1,21 @@
-# pocketsphinx-c-python
-Python C extension for Pocket Sphinx and other CMU Sphinx libraries for interaction with [Dragonfly](https://github.com/t4ngo/dragonfly)
+# sphinxwrapper
+Python C extension for Pocket Sphinx and other CMU Sphinx libraries
 
-This is a work in progress, but this project aims to create a backend for using Pocket Sphinx with 
-[Dragonfly](https://github.com/t4ngo/dragonfly) for the excellent macroing support it offers. 
-The Pocket Sphinx engine backend for dragonfly is in 
-[my fork of Dragonfly](https://github.com/Danesprite/dragonfly). 
+This is an simplified alternative to the SWIG Python modules for 
+[CMU Pocket Sphinx](https://github.com/cmusphinx/pocketsphinx) and 
+[Sphinx base](https://github.com/cmusphinx/sphinxbase). You can read more about CMU Sphinx [here](https://cmusphinx.github.io/wiki/).
 
+`sphinxwrapper` doesn't have all of the functionality that the offical SWIG Python modules do, but the 
+[examples](examples/) show what it does have. Although most of the `PocketSphinx` type methods are used, 
+some haven't been put into the examples yet.
 
 ## Installing dependencies
 This project has the following library dependencies:
 - [sphinxbase](https://github.com/cmusphinx/sphinxbase)
 - [pocketsphinx](https://github.com/cmusphinx/pocketsphinx)
+
+I've tested both *sphinxbase* and *pocketsphinx* using version **0.8+5prealpha-3**. It is best to match 
+the versions for these 2 dependencies.
 
 ### Debian GNU/Linux
 Install the dependencies on Debian using the following:
@@ -20,15 +25,13 @@ $ sudo apt install pocketsphinx sphinxbase-utils
 
 ### Compiling dependencies from source
 If the dependencies aren't available from your system's package management system, you can download and 
-compile the sources from the repositories linked above and follow the instructions there.
-
+compile the sources from the repositories linked above and follow the instructions there. 
 
 ## Install the sphinxwrapper Python Extension
 Clone or download this repository and run the following:
 ``` Shell 
 python setup.py install
 ```
-
 
 ## Usage example
 The following is a simple usage example showing how to use the `sphinxwrapper` module to make 
@@ -41,7 +44,7 @@ import time
 ps = PocketSphinx()
 
 # Set up and register a callback function to print
-# Pocket Sphinx's hypothesis for recognized speech
+# Pocket Sphinx's hypothesis for recognised speech
 def print_hypothesis(hyp):
     print("Hypothesis: %s" % hyp)
 
@@ -52,7 +55,17 @@ ps.hypothesis_callback = print_hypothesis
 ps.open_rec_from_audio_device()
 ps.start_utterance()
 while True:
-    ps.read_and_process_audio()
+    audio = ps.read_audio()
+    ps.process_audio(audio)
     time.sleep(0.1)
 
 ```
+
+## Notes
+### Python versions
+This extension module has been written for Python 2.7, so it doesn't work with Python 3+.
+I believe it isn't too difficult to make a Python 3 version. The main Python C API differences are shown [here](https://docs.python.org/3/howto/cporting.html).
+
+### Future CMU Sphinx API changes
+There will probably be changes to CMU Sphinx libraries such as Pocket Sphinx and sphinxbase that break this 
+module in the future in some way. I'm happy to fix any such issues. Just file an issue.
