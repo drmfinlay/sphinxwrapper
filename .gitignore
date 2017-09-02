@@ -3,4 +3,4 @@
 *.so
 *.o
 .fuse*
-test.py
+.idea/
