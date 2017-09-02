@@ -523,7 +523,7 @@ static PyGetSetDef PSObj_getseters[] = {
     {"in_speech",
      (getter)PSObj_get_in_speech, NULL, // No setter. AttributeError is thrown on set attempt.
      // From pocketsphinx.h:
-     "Checks if the last feed audio buffer contained speech", NULL},
+     "Checks if the last feed audio buffer contained speech.", NULL},
     {"search_name",
      (getter)PSObj_get_search_name, NULL,
      "Get the current pocket sphinx search name.", NULL},
@@ -629,7 +629,7 @@ initsphinxwrapper() {
     PSType.tp_new = PSObj_new;
     if (PyType_Ready(&PSType) < 0)
         return;
-    
+
     Py_INCREF(&PSType);
     PyModule_AddObject(module, "PocketSphinx", (PyObject *)&PSType);
 

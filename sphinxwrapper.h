@@ -26,8 +26,8 @@ typedef struct {
     PyObject *speech_start_callback; // callable
     PyObject *search_name;
     ad_rec_t *ad; // Used for recording audio
-    // whether or not pocket sphinx detected an utterance in audio input
-    // used in 'read_and_process_audio' method
+    // Whether an utterance has been started for recognising audio input.
+    // used in 'process_audio' method
     bool utterance_started;
 } PSObj;
 
