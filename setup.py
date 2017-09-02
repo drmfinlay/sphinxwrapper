@@ -2,7 +2,8 @@ from distutils.core import setup, Extension
 
 module1 = Extension('sphinxwrapper',
                     sources = [
-                        'sphinxwrapper.c'
+                        'sphinxwrapper.c',
+                        'audiodata.c'
                     ],
                     include_dirs = [
                         '/usr/local/include',
@@ -18,6 +19,6 @@ module1 = Extension('sphinxwrapper',
 )
 
 setup (name = 'SphinxWrapper',
-       version = '0.1',
+       version = '1.0',
        description = 'C extension for Pocket Sphinx',
        ext_modules = [module1])

@@ -16,6 +16,7 @@
 #include <sphinxbase/ad.h>
 #include <sphinxbase/err.h>
 #include <sphinxbase/cmd_ln.h>
+#include "audiodata.h"
 
 typedef struct {
     PyObject_HEAD
@@ -28,7 +29,6 @@ typedef struct {
     // whether or not pocket sphinx detected an utterance in audio input
     // used in 'read_and_process_audio' method
     bool utterance_started;
-    int16 adbuf[2048]; // array used to store audio read from audio devices
 } PSObj;
 
 static PyObject *
@@ -44,7 +44,10 @@ static PyObject *
 PSObj_end_utterance(PSObj *self);
 
 static PyObject *
-PSObj_read_and_process_audio(PSObj *self);
+PSObj_read_audio(PSObj *self);
+
+static PyObject *
+PSObj_process_audio(PSObj *self, PyObject *audio_buffer);
 
 static PyObject *
 PSObj_set_jsgf_search(PSObj *self, PyObject *args, PyObject *kwds);

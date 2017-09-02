@@ -11,6 +11,7 @@
 
 static PyObject *PocketSphinxError;
 static PyObject *CallbackNotSetError;
+static PyObject *AudioDataError;
 
 static const arg_t cont_args_def[] = {
     POCKETSPHINX_OPTIONS,
@@ -119,34 +120,56 @@ PSObj_end_utterance(PSObj *self) {
 }
 
 static PyObject *
-PSObj_read_and_process_audio(PSObj *self) {
+PSObj_read_audio(PSObj *self) {
     ps_decoder_t * ps = get_ps_decoder_t(self);
 
     if (ps == NULL)
 	return NULL;
-    
-    // Open and record from audio device if necessary
-    if (self->ad == NULL) {
-	PSObj_open_rec_from_audio_device(self);
-	if (self->ad == NULL)
-	    return NULL;
-    }
-    
-    uint8 in_speech;
-    int32 k = ad_read(self->ad, self->adbuf, 2048);
-    char const *hyp;
-    if (k < 0) {
+
+    // Create a new audio buffer to use
+    PyObject *audio_data = PyObject_CallObject((PyObject *)&AudioDataType, NULL);
+    AudioDataObj *audio_data_c = (AudioDataObj *)audio_data;
+
+    int32 n_samples = ad_read(self->ad, audio_data_c->audio_buffer, 2048);
+    if (n_samples < 0) {
 	PyErr_SetString(PocketSphinxError, "Failed to read audio.");
 	self->ad = NULL;
 	ps_end_utt(ps);
 	return NULL;
     }
+    audio_data_c->n_samples = n_samples;
+    audio_data_c->is_set = true;
     
-    ps_process_raw(ps, self->adbuf, k, FALSE, FALSE);
-    
+    return audio_data;
+}
+
+static PyObject *
+PSObj_process_audio(PSObj *self, PyObject *audio_data) {
+    ps_decoder_t * ps = get_ps_decoder_t(self);
+
+    if (ps == NULL)
+	return NULL;
+
+    if (! PyObject_TypeCheck(audio_data, &AudioDataType)) {
+	PyErr_SetString(PyExc_TypeError, "audio_data argument is not an AudioData object.");
+	return NULL;
+    }
+
+    AudioDataObj *audio_data_c = (AudioDataObj *)audio_data;
+
+    if (!audio_data_c->is_set) {
+	PyErr_SetString(AudioDataError, "audio_data object is not set up properly. Try using "
+			"PocketSphinx.read_audio()");
+	return NULL;
+    }
+
+    uint8 in_speech;
+    char const *hyp;
+    ps_process_raw(ps, audio_data_c->audio_buffer, audio_data_c->n_samples, FALSE, FALSE);
+
     in_speech = ps_get_in_speech(ps);
     bool utt_started = self->utterance_started;
-    
+
     if (in_speech && !utt_started) {
 	self->utterance_started = true;
 	
@@ -236,9 +259,12 @@ static PyMethodDef PSObj_methods[] = {
     {"end_utterance",
      (PyCFunction)PSObj_end_utterance, METH_NOARGS,
      PyDoc_STR("Call this function to end utterance processing.")},
-    {"read_and_process_audio",
-     (PyCFunction)PSObj_read_and_process_audio, METH_NOARGS,
-     PyDoc_STR("Read and process audio.")},
+    {"read_audio",
+     (PyCFunction)PSObj_read_audio, METH_NOARGS,
+     PyDoc_STR("Read audio from the audio device if it is open and recording.")},
+    {"process_audio",
+     (PyCFunction)PSObj_process_audio, METH_O,  // takes self + one argument
+     PyDoc_STR("Process audio from an AudioBuffer object.")},
     {"set_jsgf_search",
      (PyCFunction)PSObj_set_jsgf_search, METH_KEYWORDS,
      PyDoc_STR("Set the Java Speech Grammar Format grammar string and the name to "
@@ -607,6 +633,14 @@ initsphinxwrapper() {
     Py_INCREF(&PSType);
     PyModule_AddObject(module, "PocketSphinx", (PyObject *)&PSType);
 
+    // Set up the 'AudioBuffer' type from audiobuffer.h
+    AudioDataType.tp_new = PyType_GenericNew;
+    if (PyType_Ready(&AudioDataType) < 0)
+        return;
+
+    Py_INCREF(&AudioDataType);
+    PyModule_AddObject(module, "AudioData", (PyObject *)&AudioDataType);
+
     // Define a new Python exception
     PocketSphinxError = PyErr_NewException("PocketSphinx.Error", NULL, NULL);
     Py_INCREF(PocketSphinxError);
@@ -616,6 +650,10 @@ initsphinxwrapper() {
     CallbackNotSetError = PyErr_NewException("Callback.Error", NULL, NULL);
     Py_INCREF(CallbackNotSetError);
     PyModule_AddObject(module, "callbackerror", CallbackNotSetError);
+
+    // Define a new Python exception for when an invalid AudioData object is used.
+    AudioDataError = PyErr_NewException("AudioData.Error", NULL, NULL);
+    Py_INCREF(AudioDataError);
 }
 
 int
