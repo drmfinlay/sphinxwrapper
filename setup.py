@@ -20,5 +20,6 @@ module1 = Extension('sphinxwrapper',
 
 setup (name = 'SphinxWrapper',
        version = '1.0',
-       description = 'C extension for Pocket Sphinx',
+       description = 'Python C extension for Pocket Sphinx and '
+       'other CMU Sphinx libraries',
        ext_modules = [module1])
