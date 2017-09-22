@@ -85,3 +85,19 @@ PyTypeObject AudioDataType = {
     0,                                /* tp_alloc */
     AudioDataObj_new,                 /* tp_new */
 };
+
+void
+initaudiodata(PyObject *module) {
+    AudioDataType.tp_new = PyType_GenericNew;
+    if (PyType_Ready(&AudioDataType) < 0)
+        return;
+
+    Py_INCREF(&AudioDataType);
+    PyModule_AddObject(module, "AudioData", (PyObject *)&AudioDataType);
+
+    // Define a new Python exception for when an invalid AudioData object is used.
+    AudioDataError = PyErr_NewException("AudioData.Error", NULL, NULL);
+    Py_INCREF(AudioDataError);
+    PyModule_AddObject(module, "AudioDataError", AudioDataError);
+}
+

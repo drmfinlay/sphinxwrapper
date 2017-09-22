@@ -34,4 +34,9 @@ AudioDataObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
 int
 AudioDataObj_init(AudioDataObj *self, PyObject *args, PyObject *kwds);
 
+PyObject *AudioDataError;
+
+void
+initaudiodata(PyObject *module);
+
 #endif /* AUDIODATA_H_ */
