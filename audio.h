@@ -1,13 +1,13 @@
 /*
- * audiodata.h
+ * audio.h
  *
  *  Created on: 31 August 2017
  *      Author: Dane Finlay
  */
 
 
-#ifndef AUDIODATA_H_
-#define AUDIODATA_H_
+#ifndef AUDIO_H_
+#define AUDIO_H_
 
 #include <stdbool.h>
 #include <python2.7/Python.h>
@@ -37,6 +37,6 @@ AudioDataObj_init(AudioDataObj *self, PyObject *args, PyObject *kwds);
 PyObject *AudioDataError;
 
 void
-initaudiodata(PyObject *module);
+initaudio(PyObject *module);
 
-#endif /* AUDIODATA_H_ */
+#endif /* AUDIO_H_ */

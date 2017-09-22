@@ -4,7 +4,7 @@ module1 = Extension('sphinxwrapper',
                     sources = [
                         'sphinxwrapper.c',
                         'pypocketsphinx.c',
-                        'audiodata.c',
+                        'audio.c',
                         'pyutil.c'
                     ],
                     include_dirs = [

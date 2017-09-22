@@ -1,11 +1,11 @@
 /*
- * audiobuffer.c
+ * audio.c
  *
  *  Created on: 2nd September 2017
  *      Author: Dane Finlay
  */
 
-#include "audiodata.h"
+#include "audio.h"
 
 void
 AudioDataObj_dealloc(AudioDataObj* self) {
@@ -87,7 +87,7 @@ PyTypeObject AudioDataType = {
 };
 
 void
-initaudiodata(PyObject *module) {
+initaudio(PyObject *module) {
     AudioDataType.tp_new = PyType_GenericNew;
     if (PyType_Ready(&AudioDataType) < 0)
         return;

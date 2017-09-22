@@ -17,7 +17,7 @@
 #include <sphinxbase/err.h>
 #include <sphinxbase/cmd_ln.h>
 
-#include "audiodata.h"
+#include "audio.h"
 #include "pyutil.h"
 
 typedef struct {
@@ -40,7 +40,7 @@ PyObject *
 PSObj_end_utterance(PSObj *self);
 
 PyObject *
-PSObj_process_audio(PSObj *self, PyObject *audio_buffer);
+PSObj_process_audio(PSObj *self, PyObject *audio_data);
 
 PyObject *
 PSObj_set_jsgf_search(PSObj *self, PyObject *args, PyObject *kwds);

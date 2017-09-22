@@ -5,7 +5,7 @@
  *      Author: Dane Finlay
  */
 
-#include "audiodata.h"
+#include "audio.h"
 #include "pypocketsphinx.h"
 
 
@@ -24,8 +24,8 @@ initsphinxwrapper(void) {
     // Set up the 'PocketSphinx' type and anything else it needs
     initpocketsphinx(module);
 
-    // Do the same for the 'AudioBuffer' type
-    initaudiodata(module);
+    // Set up the audio related types
+    initaudio(module);
 }
 
 int
