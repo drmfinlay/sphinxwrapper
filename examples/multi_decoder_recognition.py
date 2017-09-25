@@ -35,23 +35,26 @@ def main():
     ps2.speech_start_callback = speech_start_callback
     
     # Recognise from the mic in a loop
-    ps1.open_rec_from_audio_device()
+    ad = AudioDevice()
+    ad.open()
+    ad.record()
     ps1.start_utterance()  # must do this before processing audio
     recorded_audio = []
     while True:
-        audio = ps1.read_audio()
+        audio = ad.read_audio()
         ps1.process_audio(audio)
         recorded_audio.append(audio)
         global hyp
         if hyp:
             break
-        time.sleep(0.1)
+        # time.sleep(0.1)
 
     # Reprocess the recorded audio with a different decoder
     print("Reprocessing...")
     ps2.start_utterance()
     for a in recorded_audio:
         ps2.process_audio(a)
+    exit()
 
 if __name__ == "__main__":
     main()

@@ -16,6 +16,11 @@
 // Required for int16 and int32
 #include <sphinxbase/prim_type.h>
 
+// Required to use sphinxbase audio device implementations
+#include <sphinxbase/ad.h>
+
+#include "pyutil.h"
+
 typedef struct {
     PyObject_HEAD
     int16 audio_buffer[2048]; // array used to store audio data
@@ -24,6 +29,8 @@ typedef struct {
 } AudioDataObj;
 
 PyTypeObject AudioDataType;
+
+PyObject *AudioDataError;
 
 void
 AudioDataObj_dealloc(AudioDataObj* self);
@@ -34,7 +41,47 @@ AudioDataObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
 int
 AudioDataObj_init(AudioDataObj *self, PyObject *args, PyObject *kwds);
 
-PyObject *AudioDataError;
+typedef struct {
+    PyObject_HEAD
+    ad_rec_t *ad; // Used for recording audio
+    PyObject *name;
+    bool open;
+    bool recording;
+} AudioDeviceObj;
+
+PyObject *
+AudioDeviceObj_open(AudioDeviceObj *self);
+
+PyObject *
+AudioDeviceObj_record(AudioDeviceObj *self);
+
+PyObject *
+AudioDeviceObj_stop_recording(AudioDeviceObj *self);
+
+PyObject *
+AudioDeviceObj_close(AudioDeviceObj *self);
+
+PyObject *
+AudioDeviceObj_read_audio(AudioDeviceObj *self);
+
+void
+AudioDeviceObj_dealloc(AudioDeviceObj* self);
+
+PyObject *
+AudioDeviceObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
+
+int
+AudioDeviceObj_init(AudioDeviceObj *self, PyObject *args, PyObject *kwds);
+
+int
+AudioDeviceObj_set_name(AudioDeviceObj *self, PyObject *value, void *closure);
+
+PyObject *
+AudioDeviceObj_get_name(AudioDeviceObj *self, void *closure);
+
+PyTypeObject AudioDeviceType;
+
+PyObject *AudioDeviceError;
 
 void
 initaudio(PyObject *module);

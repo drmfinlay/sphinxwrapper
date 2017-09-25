@@ -13,7 +13,6 @@
 #include <python2.7/Python.h>
 #include <python2.7/structmember.h>
 #include <pocketsphinx.h>
-#include <sphinxbase/ad.h>
 #include <sphinxbase/err.h>
 #include <sphinxbase/cmd_ln.h>
 
@@ -27,7 +26,6 @@ typedef struct {
     PyObject *hypothesis_callback; // callable
     PyObject *speech_start_callback; // callable
     PyObject *search_name;
-    ad_rec_t *ad; // Used for recording audio
     // Whether an utterance has been started for recognising audio input.
     // used in 'process_audio' method
     bool utterance_started;
@@ -95,14 +93,5 @@ init_ps_decoder_with_args(PSObj *self, int argc, char *argv[]);
 
 void
 initpocketsphinx(PyObject *module);
-
-PyObject *
-PSObj_open_rec_from_audio_device(PSObj *self);
-
-PyObject *
-PSObj_close_audio_device(PSObj *self);
-
-PyObject *
-PSObj_read_audio(PSObj *self);
 
 #endif /* PYPOCKETSPHINX_H_ */

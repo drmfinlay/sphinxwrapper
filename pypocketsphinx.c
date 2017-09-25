@@ -10,7 +10,6 @@
 #define PS_DEFAULT_SEARCH "_default"
 
 static PyObject *PocketSphinxError;
-static PyObject *CallbackNotSetError;
 
 const arg_t cont_args_def[] = {
     POCKETSPHINX_OPTIONS,
@@ -19,18 +18,6 @@ const arg_t cont_args_def[] = {
      ARG_STRING,
      NULL, 
      "Argument file giving extra arguments."},
-    {"-adcdev",
-     ARG_STRING,
-     NULL,
-     "Name of audio device to use for input."},
-    {"-inmic",
-     ARG_BOOLEAN,
-     "no",
-     "Transcribe audio from microphone."},
-    {"-time",
-     ARG_BOOLEAN,
-     "no",
-     "Print word times in file transcription."},
     CMDLN_EMPTY_OPTION
 };
 
@@ -187,21 +174,12 @@ PSObj_set_jsgf_search(PSObj *self, PyObject *args, PyObject *kwds) {
 }
 
 PyMethodDef PSObj_methods[] = {
-    {"open_rec_from_audio_device",
-     (PyCFunction)PSObj_open_rec_from_audio_device, METH_NOARGS,
-     PyDoc_STR("Open the audio device for recording speech and start recording.")},
-    {"close_audio_device",
-     (PyCFunction)PSObj_close_audio_device, METH_NOARGS,
-     PyDoc_STR("If it's open, close the audio device used to record speech.")},
     {"start_utterance",
      (PyCFunction)PSObj_start_utterance, METH_NOARGS,
      PyDoc_STR("Call this function before passing any utterance data.")},
     {"end_utterance",
      (PyCFunction)PSObj_end_utterance, METH_NOARGS,
      PyDoc_STR("Call this function to end utterance processing.")},
-    {"read_audio",
-     (PyCFunction)PSObj_read_audio, METH_NOARGS,
-     PyDoc_STR("Read audio from the audio device if it is open and recording.")},
     {"process_audio",
      (PyCFunction)PSObj_process_audio, METH_O,  // takes self + one argument
      PyDoc_STR("Process audio from an AudioBuffer object.")},
@@ -228,14 +206,11 @@ PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
         Py_INCREF(Py_None);
         self->search_name = Py_None;
-	
+
 	// Ensure pointer members are NULL
         self->ps = NULL;
         self->config = NULL;
 
-	// Ensure the 'ad' member used when opening and recording
-	// from audio devices is set to NULL for now.
-	self->ad = NULL;
 	self->utterance_started = false;
     }
 
@@ -257,11 +232,6 @@ PSObj_dealloc(PSObj* self) {
     ps_decoder_t *ps = self->ps;
     if (ps != NULL)
 	ps_free(ps);
-
-    // Close the audio device if it's open
-    ad_rec_t *ad = self->ad;
-    if (ad != NULL)
-	ad_close(ad);
 
     // Finally free the PSObj itself
     Py_TYPE(self)->tp_free((PyObject*)self);
@@ -288,7 +258,7 @@ get_cmd_ln_t(PSObj *self) {
 
 int
 PSObj_init(PSObj *self, PyObject *args, PyObject *kwds) {
-    PyObject *ps_args=NULL;
+    PyObject *ps_args = NULL;
     Py_ssize_t list_size;
 
     static char *kwlist[] = {"ps_args", NULL};
@@ -529,97 +499,18 @@ void
 initpocketsphinx(PyObject *module) {
     // Set up the 'PocketSphinx' type
     PSType.tp_new = PSObj_new;
-    if (PyType_Ready(&PSType) < 0)
+    if (PyType_Ready(&PSType) < 0) {
         return;
+    }
 
     Py_INCREF(&PSType);
     PyModule_AddObject(module, "PocketSphinx", (PyObject *)&PSType);
 
     // Define a new Python exception
-    // Not really sure why there needs to be a dot in the exception name...
-    // If there isn't one, importing the module segfaults.
-    PocketSphinxError = PyErr_NewException("PocketSphinx.Error", NULL, NULL);
+    PocketSphinxError = PyErr_NewException("sphinxwrapper.PocketSphinxError",
+					   NULL, NULL);
     Py_INCREF(PocketSphinxError);
 
     PyModule_AddObject(module, "PocketSphinxError", PocketSphinxError);
-
-    // Define another one for calling callbacks that aren't set
-    CallbackNotSetError = PyErr_NewException("Callback.Error", NULL, NULL);
-    Py_INCREF(CallbackNotSetError);
-    PyModule_AddObject(module, "CallbackError", CallbackNotSetError);
-}
-
-PyObject *
-PSObj_open_rec_from_audio_device(PSObj *self) {
-    ps_decoder_t * ps = get_ps_decoder_t(self);
-
-    if (ps == NULL)
-	return NULL;
-    
-    if (self->ad == NULL) {
-	const char *mic_dev = cmd_ln_str_r(get_cmd_ln_t(self), "-adcdev");
-
-	// Doesn't matter if dev is NULL; ad_open_dev will use the
-	// defined default device, at least for pulse audio..
-	// TODO Make sure other ad.h implementations (alsa, jack, etc)
-	// don't seg fault or anything if mic_dev is NULL.
-	self->ad = ad_open_dev(mic_dev, 16000);
-    }
-
-    // If it's still NULL, then that's an error.
-    if (self->ad == NULL) {
-	PyErr_SetString(PocketSphinxError,
-			"Couldn't open audio device.");
-	return NULL;
-    }
-    
-    if (ad_start_rec(self->ad) < 0) {
-        PyErr_SetString(PocketSphinxError,
-			"Failed to start recording.");
-	return NULL;
-    }
-
-    self->utterance_started = false;
-    printf("READY....\n");
-    
-    Py_INCREF(Py_None);
-    return Py_None;
-}
-
-PyObject *
-PSObj_close_audio_device(PSObj *self) {
-    ad_rec_t *ad = self->ad;
-    if (ad != NULL) {
-	ad_close(ad);
-	self->ad = NULL;
-    }
-    
-    Py_INCREF(Py_None);
-    return Py_None;
-}
-
-
-PyObject *
-PSObj_read_audio(PSObj *self) {
-    ps_decoder_t * ps = get_ps_decoder_t(self);
-
-    if (ps == NULL)
-	return NULL;
-
-    // Create a new audio buffer to use
-    PyObject *audio_data = PyObject_CallObject((PyObject *)&AudioDataType, NULL);
-    AudioDataObj *audio_data_c = (AudioDataObj *)audio_data;
-
-    int32 n_samples = ad_read(self->ad, audio_data_c->audio_buffer, 2048);
-    if (n_samples < 0) {
-	PyErr_SetString(PocketSphinxError, "Failed to read audio.");
-	self->ad = NULL;
-	ps_end_utt(ps);
-	return NULL;
-    }
-    audio_data_c->n_samples = n_samples;
-    audio_data_c->is_set = true;
-    
-    return audio_data;
 }
 

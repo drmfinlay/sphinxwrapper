@@ -36,6 +36,8 @@ main(int argc, char *argv[]) {
     /* Initialize the Python interpreter.  Required. */
     Py_Initialize();
 
+    PyEval_InitThreads();
+
     /* Add a static module */
     initsphinxwrapper();
 }
