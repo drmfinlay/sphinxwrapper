@@ -37,8 +37,7 @@ python setup.py install
 The following is a simple usage example showing how to use the `sphinxwrapper` module to make 
 Pocket Sphinx continuously recognize from the default microphone using the default configuration.
 ``` Python
-from sphinxwrapper import PocketSphinx
-import time
+from sphinxwrapper import AudioDevice, PocketSphinx
 
 # Set up a Pocket Sphinx decoder with the default config
 ps = PocketSphinx()
@@ -52,12 +51,13 @@ ps.hypothesis_callback = print_hypothesis
 
 # Have it decode from the default audio input device
 # continously
-ps.open_rec_from_audio_device()
+ad = AudioDevice()
+ad.open()
+ad.record()
 ps.start_utterance()
 while True:
-    audio = ps.read_audio()
+    audio = ad.read_audio()
     ps.process_audio(audio)
-    time.sleep(0.1)
 
 ```
 
