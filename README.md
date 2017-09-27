@@ -54,7 +54,6 @@ ps.hypothesis_callback = print_hypothesis
 ad = AudioDevice()
 ad.open()
 ad.record()
-ps.start_utterance()
 while True:
     audio = ad.read_audio()
     ps.process_audio(audio)

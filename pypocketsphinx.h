@@ -19,6 +19,12 @@
 #include "audio.h"
 #include "pyutil.h"
 
+typedef enum utterance_state_e {
+    IDLE,
+    STARTED,
+    ENDED
+} utterance_state_t;
+
 typedef struct {
     PyObject_HEAD
     ps_decoder_t *ps; // pocketsphinx decoder pointer
@@ -26,16 +32,9 @@ typedef struct {
     PyObject *hypothesis_callback; // callable or None
     PyObject *speech_start_callback; // callable or None
     PyObject *search_name; // string
-    // Whether an utterance has been started for recognising audio input.
-    // used in 'process_audio' method
-    bool utterance_in_progress;
+    // Utterance state used in processing methods
+    utterance_state_t utterance_state;
 } PSObj;
-
-PyObject *
-PSObj_start_utterance(PSObj *self);
-
-PyObject *
-PSObj_end_utterance(PSObj *self);
 
 PyObject *
 PSObj_process_audio_internal(PSObj *self, PyObject *audio_data,

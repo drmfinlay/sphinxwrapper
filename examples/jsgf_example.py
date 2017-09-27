@@ -27,7 +27,6 @@ def main():
     ad = AudioDevice()
     ad.open()
     ad.record()
-    ps.start_utterance()  # must do this before processing audio
     while True:
         audio = ad.read_audio()
         ps.process_audio(audio)

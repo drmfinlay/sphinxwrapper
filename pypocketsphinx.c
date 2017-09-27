@@ -22,41 +22,6 @@ const arg_t cont_args_def[] = {
 };
 
 PyObject *
-PSObj_start_utterance(PSObj *self) {
-    PyObject *result = NULL;
-    ps_decoder_t * ps = get_ps_decoder_t(self);
-
-    if (ps == NULL)
-	return NULL;
-    int r = ps_start_utt(ps);
-    if (r == 0) {
-	Py_INCREF(Py_None);
-	result = Py_None;
-    } else
-        PyErr_Format(PocketSphinxError,	"Failed to start utterance. "
-		     "Got '%d' from ps_start_utt.", r);
-    return result;
-}
-
-PyObject *
-PSObj_end_utterance(PSObj *self) {
-    PyObject *result = NULL;
-    ps_decoder_t * ps = get_ps_decoder_t(self);
-
-    if (ps == NULL)
-	return NULL;
-    
-    int r = ps_end_utt(ps);
-    if (r == 0) {
-	Py_INCREF(Py_None);
-	result = Py_None;
-    } else
-        PyErr_Format(PocketSphinxError,	"Failed to end utterance. "
-		     "Got '%d' from ps_end_utt.", r);
-    return result;
-}
-
-PyObject *
 PSObj_process_audio_internal(PSObj *self, PyObject *audio_data,
 			     bool call_callbacks) {
     ps_decoder_t * ps = get_ps_decoder_t(self);
@@ -78,21 +43,26 @@ PSObj_process_audio_internal(PSObj *self, PyObject *audio_data,
         return NULL;
     }
 
+    // Call ps_start_utt if necessary
+    if (self->utterance_state == ENDED) {
+	ps_start_utt(ps);
+        self->utterance_state = IDLE;
+    }
+
     ps_process_raw(ps, audio_data_c->audio_buffer, audio_data_c->n_samples, FALSE, FALSE);
 
     uint8 in_speech = ps_get_in_speech(ps);
-    bool utt_started = self->utterance_in_progress;
     PyObject *result = Py_None; // incremented at end of function as result
 
-    if (in_speech && !utt_started) {
-        self->utterance_in_progress = true;
-	
+    if (in_speech && self->utterance_state == IDLE) {
+        self->utterance_state = STARTED;
+
         // Call speech_start callback if necessary
         PyObject *callback = self->speech_start_callback;
         if (call_callbacks && PyCallable_Check(callback)) {
             PyObject_CallObject(callback, NULL); // no args required.
         }
-    } else if (!in_speech && utt_started) {
+    } else if (!in_speech && self->utterance_state == STARTED) {
         /* speech -> silence transition, time to start new utterance  */
         ps_end_utt(ps);
 
@@ -117,12 +87,7 @@ PSObj_process_audio_internal(PSObj *self, PyObject *audio_data,
 	    result = Py_BuildValue("s", hyp);
 	}
 
-        if (ps_start_utt(ps) < 0) {
-            PyErr_SetString(PocketSphinxError, "Failed to start "
-                            "utterance.");
-            return NULL;
-        }
-        self->utterance_in_progress = false;
+        self->utterance_state = ENDED;
     }
 
     Py_INCREF(result);
@@ -212,12 +177,6 @@ PSObj_set_jsgf_search(PSObj *self, PyObject *args, PyObject *kwds) {
 }
 
 PyMethodDef PSObj_methods[] = {
-    {"start_utterance",
-     (PyCFunction)PSObj_start_utterance, METH_NOARGS,
-     PyDoc_STR("Call this function before passing any utterance data.")},
-    {"end_utterance",
-     (PyCFunction)PSObj_end_utterance, METH_NOARGS,
-     PyDoc_STR("Call this function to end utterance processing.")},
     {"process_audio",
      (PyCFunction)PSObj_process_audio, METH_O,  // takes self + one argument
      PyDoc_STR("Process audio from an AudioData object and call the speech_start and "
@@ -255,7 +214,7 @@ PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->ps = NULL;
         self->config = NULL;
 
-	self->utterance_in_progress = false;
+	self->utterance_state = ENDED;
     }
 
     return (PyObject *)self;

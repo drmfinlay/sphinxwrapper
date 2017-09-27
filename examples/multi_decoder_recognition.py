@@ -31,7 +31,6 @@ def main():
     ad = AudioDevice()
     ad.open()
     ad.record()
-    ps1.start_utterance()  # must do this before processing audio
     recorded_audio = []
     while True:
         audio = ad.read_audio()
@@ -44,7 +43,6 @@ def main():
 
     # Reprocess the recorded audio with a different decoder
     print("Reprocessing...")
-    ps2.start_utterance()
     print("Language model hypothesis: '%s'" % ps2.batch_process(recorded_audio))
 
 
