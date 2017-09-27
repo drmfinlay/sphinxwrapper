@@ -21,18 +21,11 @@ def main():
         global hyp
         hyp = s
 
-    def lm_hyp_callback(s):
-        print("Language model hypothesis: %s" % s)
-        global hyp
-        hyp = s
-
     def speech_start_callback():
         print("Speech started.")
 
     ps1.hypothesis_callback = jsgf_hyp_callback
-    ps2.hypothesis_callback = lm_hyp_callback
     ps1.speech_start_callback = speech_start_callback
-    ps2.speech_start_callback = speech_start_callback
     
     # Recognise from the mic in a loop
     ad = AudioDevice()
@@ -52,9 +45,8 @@ def main():
     # Reprocess the recorded audio with a different decoder
     print("Reprocessing...")
     ps2.start_utterance()
-    for a in recorded_audio:
-        ps2.process_audio(a)
-    exit()
+    print("Language model hypothesis: '%s'" % ps2.batch_process(recorded_audio))
+
 
 if __name__ == "__main__":
     main()

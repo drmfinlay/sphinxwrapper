@@ -38,7 +38,14 @@ PyObject *
 PSObj_end_utterance(PSObj *self);
 
 PyObject *
+PSObj_process_audio_internal(PSObj *self, PyObject *audio_data,
+			     bool call_callbacks);
+
+PyObject *
 PSObj_process_audio(PSObj *self, PyObject *audio_data);
+
+PyObject *
+PSObj_batch_process(PSObj *self, PyObject *list);
 
 PyObject *
 PSObj_set_jsgf_search(PSObj *self, PyObject *args, PyObject *kwds);

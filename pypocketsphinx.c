@@ -57,52 +57,52 @@ PSObj_end_utterance(PSObj *self) {
 }
 
 PyObject *
-PSObj_process_audio(PSObj *self, PyObject *audio_data) {
+PSObj_process_audio_internal(PSObj *self, PyObject *audio_data,
+			     bool call_callbacks) {
     ps_decoder_t * ps = get_ps_decoder_t(self);
 
     if (ps == NULL)
-	return NULL;
+        return NULL;
 
-    if (! PyObject_TypeCheck(audio_data, &AudioDataType)) {
-	PyErr_SetString(PyExc_TypeError, "audio_data argument is not an AudioData object.");
-	return NULL;
+    if (!PyObject_TypeCheck(audio_data, &AudioDataType)) {
+        PyErr_SetString(PyExc_TypeError, "argument or item is not an AudioData "
+			"object.");
+        return NULL;
     }
 
     AudioDataObj *audio_data_c = (AudioDataObj *)audio_data;
 
     if (!audio_data_c->is_set) {
-	PyErr_SetString(AudioDataError, "audio_data object is not set up properly. Try using "
-			"PocketSphinx.read_audio()");
-	return NULL;
+        PyErr_SetString(AudioDataError, "AudioData object is not set up properly. "
+			"Try using the result from AudioDevice.read_audio()");
+        return NULL;
     }
 
-    uint8 in_speech;
-    char const *hyp;
     ps_process_raw(ps, audio_data_c->audio_buffer, audio_data_c->n_samples, FALSE, FALSE);
 
-    in_speech = ps_get_in_speech(ps);
+    uint8 in_speech = ps_get_in_speech(ps);
     bool utt_started = self->utterance_started;
+    PyObject *result = Py_None; // incremented at end of function as result
 
     if (in_speech && !utt_started) {
-	self->utterance_started = true;
+        self->utterance_started = true;
 	
-	// Call speech_start callback
-	PyObject *callback = self->speech_start_callback;
-	if (PyCallable_Check(callback)) {
-	    PyObject_CallObject(callback, NULL); // no args required.
-	}
-    }
+        // Call speech_start callback if necessary
+        PyObject *callback = self->speech_start_callback;
+        if (call_callbacks && PyCallable_Check(callback)) {
+            PyObject_CallObject(callback, NULL); // no args required.
+        }
+    } else if (!in_speech && utt_started) {
+        /* speech -> silence transition, time to start new utterance  */
+        ps_end_utt(ps);
 
-    if (!in_speech && utt_started) {
-	/* speech -> silence transition, time to start new utterance  */
-	ps_end_utt(ps);
-	hyp = ps_get_hyp(ps, NULL);
+	char const *hyp = ps_get_hyp(ps, NULL);
 	
 	// Call the Python hypothesis callback if it is callable
 	// It should have the correct number of arguments because
 	// of the checks in set_hypothesis_callback
 	PyObject *callback = self->hypothesis_callback;
-	if (PyCallable_Check(callback)) {
+	if (call_callbacks && PyCallable_Check(callback)) {
 	    PyObject *args;
 	    if (hyp != NULL) {
 		args = Py_BuildValue("(s)", hyp);
@@ -110,20 +110,63 @@ PSObj_process_audio(PSObj *self, PyObject *audio_data) {
 		Py_INCREF(Py_None);
 		args = Py_BuildValue("(O)", Py_None);
 	    }
-	    
+
 	    PyObject_CallObject(callback, args);
+	} else if (!call_callbacks) {
+	    // Return the hypothesis instead
+	    result = Py_BuildValue("s", hyp);
 	}
-	
-	if (ps_start_utt(ps) < 0) {
-	    PyErr_SetString(PocketSphinxError, "Failed to start "
-			    "utterance.");
-	    return NULL;
-	}
-	self->utterance_started = false;
+
+        if (ps_start_utt(ps) < 0) {
+            PyErr_SetString(PocketSphinxError, "Failed to start "
+                            "utterance.");
+            return NULL;
+        }
+        self->utterance_started = false;
     }
 
-    Py_INCREF(Py_None);
-    return Py_None;
+    Py_INCREF(result);
+    return result;
+}
+
+PyObject *
+PSObj_process_audio(PSObj *self, PyObject *audio_data) {
+    PyObject *result = PSObj_process_audio_internal(self, audio_data, true);
+
+    if (result == NULL)
+        return NULL;
+
+    return result;
+}
+
+PyObject *
+PSObj_batch_process(PSObj *self, PyObject *list) {
+    if (list == NULL || !PyList_Check(list)) {
+        PyErr_SetString(PyExc_TypeError, "argument must be a list");
+	return NULL;
+    }
+
+    Py_ssize_t list_size = PyList_Size(list);
+    PyObject *result;
+    if (list_size == 0) {
+	Py_INCREF(Py_None);
+	result = Py_None;
+    }
+
+    for (Py_ssize_t i = 0; i < list_size; i++) {
+        PyObject * item = PyList_GetItem(list, i);
+        if (!PyObject_TypeCheck(item, &AudioDataType)) {
+            PyErr_SetString(PyExc_TypeError, "all list items must be AudioData objects!");
+            return NULL;
+        }
+	result = PSObj_process_audio_internal(self, item, false);
+
+	// Break on errors so NULL is returned
+	if (result == NULL)
+	    break;
+    }
+
+    return result;
 }
 
 PyObject *
@@ -182,7 +225,13 @@ PyMethodDef PSObj_methods[] = {
      PyDoc_STR("Call this function to end utterance processing.")},
     {"process_audio",
      (PyCFunction)PSObj_process_audio, METH_O,  // takes self + one argument
-     PyDoc_STR("Process audio from an AudioBuffer object.")},
+     PyDoc_STR("Process audio from an AudioData object and call the speech_start and "
+	       "hypothesis callbacks where necessary.")},
+    {"batch_process",
+     (PyCFunction)PSObj_batch_process, METH_O,  // takes self + one argument
+     PyDoc_STR("Process a list of AudioData objects and return a speech hypothesis "
+	       "or None.\n"
+	       "This method doesn't call speech_start or hypothesis callbacks.")},
     {"set_jsgf_search",
      (PyCFunction)PSObj_set_jsgf_search, METH_KEYWORDS,
      PyDoc_STR("Set the JSpeech Grammar Format grammar string or file path and "
