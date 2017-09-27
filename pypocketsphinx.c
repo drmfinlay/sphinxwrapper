@@ -131,12 +131,7 @@ PSObj_process_audio_internal(PSObj *self, PyObject *audio_data,
 
 PyObject *
 PSObj_process_audio(PSObj *self, PyObject *audio_data) {
-    PyObject *result = PSObj_process_audio_internal(self, audio_data, true);
-
-    if (result == NULL)
-        return NULL;
-
-    return result;
+    return PSObj_process_audio_internal(self, audio_data, true);
 }
 
 PyObject *
