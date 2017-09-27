@@ -23,9 +23,9 @@ typedef struct {
     PyObject_HEAD
     ps_decoder_t *ps; // pocketsphinx decoder pointer
     cmd_ln_t * config; // sphinxbase commandline config struct pointer
-    PyObject *hypothesis_callback; // callable
-    PyObject *speech_start_callback; // callable
-    PyObject *search_name;
+    PyObject *hypothesis_callback; // callable or None
+    PyObject *speech_start_callback; // callable or None
+    PyObject *search_name; // string
     // Whether an utterance has been started for recognising audio input.
     // used in 'process_audio' method
     bool utterance_started;
