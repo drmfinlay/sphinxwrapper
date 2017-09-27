@@ -81,11 +81,11 @@ PSObj_process_audio_internal(PSObj *self, PyObject *audio_data,
     ps_process_raw(ps, audio_data_c->audio_buffer, audio_data_c->n_samples, FALSE, FALSE);
 
     uint8 in_speech = ps_get_in_speech(ps);
-    bool utt_started = self->utterance_started;
+    bool utt_started = self->utterance_in_progress;
     PyObject *result = Py_None; // incremented at end of function as result
 
     if (in_speech && !utt_started) {
-        self->utterance_started = true;
+        self->utterance_in_progress = true;
 	
         // Call speech_start callback if necessary
         PyObject *callback = self->speech_start_callback;
@@ -122,7 +122,7 @@ PSObj_process_audio_internal(PSObj *self, PyObject *audio_data,
                             "utterance.");
             return NULL;
         }
-        self->utterance_started = false;
+        self->utterance_in_progress = false;
     }
 
     Py_INCREF(result);
@@ -255,7 +255,7 @@ PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->ps = NULL;
         self->config = NULL;
 
-	self->utterance_started = false;
+	self->utterance_in_progress = false;
     }
 
     return (PyObject *)self;

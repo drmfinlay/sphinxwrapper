@@ -28,7 +28,7 @@ typedef struct {
     PyObject *search_name; // string
     // Whether an utterance has been started for recognising audio input.
     // used in 'process_audio' method
-    bool utterance_started;
+    bool utterance_in_progress;
 } PSObj;
 
 PyObject *
