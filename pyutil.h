@@ -9,8 +9,7 @@
 #define PYUTIL_H_
 
 #include <stdbool.h>
-#include <python2.7/Python.h>
-#include <python2.7/structmember.h>
+#include <Python.h>
 
 /* Checks the argument count of a callable Python object and returns true
  * if it matches arg_count, or returns false if it doesn't and sets a 
