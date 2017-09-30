@@ -374,8 +374,10 @@ PSObj_set_speech_start_callback(PSObj *self, PyObject *value, void *closure) {
 	return -1;
     }
 
+#if PY_MAJOR_VERSION >= 2 && PY_MAJOR_VERSION < 3
     if (!assert_callable_arg_count(value, 0))
 	return -1;
+#endif
 
     Py_DECREF(self->speech_start_callback);
     Py_INCREF(value);
@@ -397,9 +399,11 @@ PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure) {
 	return -1;
     }
 
+#if PY_MAJOR_VERSION >= 2 && PY_MAJOR_VERSION < 3
     if (!assert_callable_arg_count(value, 1))
 	return -1;
-    
+#endif
+
     Py_DECREF(self->hypothesis_callback);
     Py_INCREF(value);
     self->hypothesis_callback = value;
