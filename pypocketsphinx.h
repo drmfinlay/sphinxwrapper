@@ -10,8 +10,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
-#include <python2.7/Python.h>
-#include <python2.7/structmember.h>
+#include <Python.h>
 #include <pocketsphinx.h>
 #include <sphinxbase/err.h>
 #include <sphinxbase/cmd_ln.h>

@@ -10,8 +10,7 @@
 #define AUDIO_H_
 
 #include <stdbool.h>
-#include <python2.7/Python.h>
-#include <python2.7/structmember.h>
+#include <Python.h>
 
 // Required for int16 and int32
 #include <sphinxbase/prim_type.h>
