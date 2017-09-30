@@ -60,7 +60,11 @@ PSObj_process_audio_internal(PSObj *self, PyObject *audio_data,
         // Call speech_start callback if necessary
         PyObject *callback = self->speech_start_callback;
         if (call_callbacks && PyCallable_Check(callback)) {
-            PyObject_CallObject(callback, NULL); // no args required.
+	    // NULL args means no args are required.
+	    PyObject *cb_result = PyObject_CallObject(callback, NULL);
+	    if (cb_result == NULL) {
+		result = cb_result;
+	    }
         }
     } else if (!in_speech && self->utterance_state == STARTED) {
         /* speech -> silence transition, time to start new utterance  */
@@ -81,7 +85,10 @@ PSObj_process_audio_internal(PSObj *self, PyObject *audio_data,
 		args = Py_BuildValue("(O)", Py_None);
 	    }
 
-	    PyObject_CallObject(callback, args);
+	    PyObject *cb_result = PyObject_CallObject(callback, args);
+	    if (cb_result == NULL) {
+		result = cb_result;
+	    }
 	} else if (!call_callbacks) {
 	    // Return the hypothesis instead
 	    result = Py_BuildValue("s", hyp);
@@ -90,7 +97,7 @@ PSObj_process_audio_internal(PSObj *self, PyObject *audio_data,
         self->utterance_state = ENDED;
     }
 
-    Py_INCREF(result);
+    Py_XINCREF(result);
     return result;
 }
 
