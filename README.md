@@ -38,6 +38,7 @@ The following is a simple usage example showing how to use the `sphinxwrapper` m
 Pocket Sphinx continuously recognize from the default microphone using the default configuration.
 ``` Python
 from sphinxwrapper import AudioDevice, PocketSphinx
+import time
 
 # Set up a Pocket Sphinx decoder with the default config
 ps = PocketSphinx()
@@ -57,13 +58,13 @@ ad.record()
 while True:
     audio = ad.read_audio()
     ps.process_audio(audio)
+    time.sleep(0.1)
 
 ```
 
 ## Notes
 ### Python versions
-This extension module has been written for Python 2.7, so it doesn't work with Python 3+.
-I believe it isn't too difficult to make a Python 3 version. The main Python C API differences are shown [here](https://docs.python.org/3/howto/cporting.html).
+This extension module has been written for Python 2.7 and above. For the most part, it should work exactly the same in Python 2.7 and Python 3+. If you come across any problems that are specific to the Python version you're using, then please feel free file an issue.
 
 ### Future CMU Sphinx API changes
 There will probably be changes to CMU Sphinx libraries such as Pocket Sphinx and sphinxbase that break this 
