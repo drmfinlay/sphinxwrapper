@@ -18,8 +18,6 @@
 // Required to use sphinxbase audio device implementations
 #include <sphinxbase/ad.h>
 
-#include "pyutil.h"
-
 typedef struct {
     PyObject_HEAD
     int16 audio_buffer[2048]; // array used to store audio data
@@ -82,7 +80,7 @@ PyTypeObject AudioDeviceType;
 
 PyObject *AudioDeviceError;
 
-void
+PyObject *
 initaudio(PyObject *module);
 
 #endif /* AUDIO_H_ */

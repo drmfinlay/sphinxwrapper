@@ -282,19 +282,28 @@ PSObj_init(PSObj *self, PyObject *args, PyObject *kwds) {
             PyErr_SetString(PyExc_TypeError, "parameter must be a list");
 	    return -1;
 	}
-        
+
 	// Extract strings from Python list into a C string array and use that
 	// to call init_ps_decoder_with_args
 	list_size = PyList_Size(ps_args);
 	char *strings[list_size];
 	for (Py_ssize_t i = 0; i < list_size; i++) {
 	    PyObject * item = PyList_GetItem(ps_args, i);
+	    char *err_msg = "all list items must be strings!";
+#if PY_MAJOR_VERSION >= 3
+	    if (!PyUnicode_Check(item)) {
+		PyErr_SetString(PyExc_TypeError, err_msg);
+	    }
+
+	    strings[i] = PyUnicode_AsUTF8(item);
+#else
 	    if (!PyString_Check(item)) {
-		PyErr_SetString(PyExc_TypeError, "all list items must be strings!");
+		PyErr_SetString(PyExc_TypeError, err_msg);
 		return -1;
 	    }
 		
 	    strings[i] = PyString_AsString(item);
+#endif
 	}
 
 	// Init a new pocket sphinx decoder or raise a PocketSphinxError and return -1
@@ -505,12 +514,12 @@ init_ps_decoder_with_args(PSObj *self, int argc, char *argv[]) {
     return true;
 }
 
-void
+PyObject *
 initpocketsphinx(PyObject *module) {
     // Set up the 'PocketSphinx' type
     PSType.tp_new = PSObj_new;
     if (PyType_Ready(&PSType) < 0) {
-        return;
+	return NULL;
     }
 
     Py_INCREF(&PSType);
@@ -522,5 +531,6 @@ initpocketsphinx(PyObject *module) {
     Py_INCREF(PocketSphinxError);
 
     PyModule_AddObject(module, "PocketSphinxError", PocketSphinxError);
+    return module;
 }
 

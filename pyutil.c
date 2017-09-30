@@ -15,7 +15,11 @@ assert_callable_arg_count(PyObject *value, const unsigned int arg_count) {
     if(fc) {
 	PyObject* ac = PyObject_GetAttrString(fc, "co_argcount");
 	if(ac) {
+#if PY_MAJOR_VERSION >= 3
+	    count = PyLong_AsLong(ac);
+#else
 	    count = PyInt_AsLong(ac);
+#endif
 	    Py_DECREF(ac);
 	}
 	Py_DECREF(fc);

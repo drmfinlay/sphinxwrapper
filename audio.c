@@ -94,8 +94,24 @@ AudioDeviceObj_open(AudioDeviceObj *self) {
                         "Audio device is already open.");
 	return NULL;
     }
+    const char *dev = NULL;
 
-    const char *dev = PyString_AsString(self->name);
+    // Get a C representation of the audio device name from self->name
+    // This is operation is different in Python 2.7 and 3+
+#if PY_MAJOR_VERSION >= 3
+    if (PyUnicode_Check(self->name)) {
+	dev = PyUnicode_AsUTF8(self->name);
+#else
+    if (PyString_Check(self->name)) {
+	dev = PyString_AsString(self->name);
+#endif
+    }
+
+    if (self->name != Py_None && dev == NULL) {
+	// There was an error in the PyString_AsString or PyUnicode_AsUTF8 functions
+	// so assume a Python error message was set and return NULL
+	return NULL;
+    }
 
     // Doesn't matter if dev is NULL; ad_open_dev will use the
     // defined default device, at least for pulse audio..
@@ -279,8 +295,11 @@ AudioDeviceObj_set_name(AudioDeviceObj *self, PyObject *value, void *closure) {
 	PyErr_SetString(PyExc_AttributeError, "cannot delete the name attribute.");
         return -1;
     }
-
+#if PY_MAJOR_VERSION >= 3
+    if (PyUnicode_Check(value) || value == Py_None) {
+#else
     if (PyString_Check(value) || value == Py_None) {
+#endif
 	Py_DECREF(self->name);
         self->name = value;
 	Py_INCREF(self->name);
@@ -369,11 +388,11 @@ PyTypeObject AudioDeviceType = {
     AudioDeviceObj_new,                 /* tp_new */
 };
 
-void
+PyObject *
 initaudio(PyObject *module) {
     AudioDataType.tp_new = AudioDataObj_new;
     if (PyType_Ready(&AudioDataType) < 0) {
-        return;
+        return NULL;
     }
 
     Py_INCREF(&AudioDataType);
@@ -387,7 +406,7 @@ initaudio(PyObject *module) {
     // Set up the AudioDevice type using a non-generic new method
     AudioDeviceType.tp_new = AudioDeviceObj_new;
     if (PyType_Ready(&AudioDeviceType) < 0) {
-	return;
+	return NULL;
     }
 
     Py_INCREF(&AudioDeviceType);
@@ -398,5 +417,7 @@ initaudio(PyObject *module) {
     AudioDeviceError = PyErr_NewException("sphinxwrapper.AudioDeviceError", NULL, NULL);
     Py_INCREF(AudioDeviceError);
     PyModule_AddObject(module, "AudioDeviceError", AudioDeviceError);
+
+    return module;
 }
 

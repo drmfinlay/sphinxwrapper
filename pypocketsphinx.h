@@ -96,7 +96,7 @@ PyTypeObject PSType;
 bool
 init_ps_decoder_with_args(PSObj *self, int argc, char *argv[]);
 
-void
+PyObject *
 initpocketsphinx(PyObject *module);
 
 #endif /* PYPOCKETSPHINX_H_ */
