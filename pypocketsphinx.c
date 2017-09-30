@@ -194,7 +194,7 @@ PyMethodDef PSObj_methods[] = {
 	       "or None.\n"
 	       "This method doesn't call speech_start or hypothesis callbacks.")},
     {"set_jsgf_search",
-     (PyCFunction)PSObj_set_jsgf_search, METH_KEYWORDS,
+     (PyCFunction)PSObj_set_jsgf_search, METH_KEYWORDS | METH_VARARGS,
      PyDoc_STR("Set the JSpeech Grammar Format grammar string or file path and "
 	       "optionally the name to use for the Pocket Sphinx search.\n "
 	       "Setting an old search name will replace that search.")},
