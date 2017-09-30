@@ -39,7 +39,7 @@ def main():
         global hyp
         if hyp:
             break
-        # time.sleep(0.1)
+        time.sleep(0.1)
 
     # Reprocess the recorded audio with a different decoder
     print("Reprocessing...")

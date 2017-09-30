@@ -1,5 +1,5 @@
 from sphinxwrapper import *
-# import time
+import time
 
 
 def speech_start_callback():
@@ -22,7 +22,7 @@ def main():
     while True:
         audio = ad.read_audio()
         ps.process_audio(audio)
-        # time.sleep(0.1)
+        time.sleep(0.1)
 
 if __name__ == "__main__":
     main()
