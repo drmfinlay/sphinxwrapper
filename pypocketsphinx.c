@@ -137,67 +137,170 @@ PSObj_batch_process(PSObj *self, PyObject *list) {
 }
 
 PyObject *
-PSObj_set_jsgf_search(PSObj *self, PyObject *args, PyObject *kwds) {
-    const char *name = NULL;
-    const char *jsgf_str = NULL;
-    const char *jsgf_file = NULL;
-    static char *kwlist[] = {"jsgf_str", "jsgf_file", "name", NULL};
-    
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|sss", kwlist, &jsgf_str, &jsgf_file, &name))
-        return NULL;
-
-    if (!name)
-	name = PS_DEFAULT_SEARCH;
-
-    if (!(jsgf_str || jsgf_file) || (jsgf_str && jsgf_file)) {
-	PyErr_SetString(PocketSphinxError, "either the jsgf_str OR the jsgf_file argument must be "
-			"used when calling this method");
-	return NULL;
+PSObj_set_search_internal(PSObj *self, ps_search_type search_type,
+			  PyObject *args,PyObject *kwds) {
+    // Set up the keyword list
+    char *req_kw;
+    switch (search_type) {
+    case JSGF_STR:
+	req_kw = "str";
+	break;
+    case KWS_STR:
+	req_kw = "keyphrase";
+	break;
+    default: // everything else requires a file path
+	req_kw = "path";
     }
+    char *kwlist[] = {req_kw, "name", NULL};
+
+    const char *value = NULL;
+    const char *name = NULL;
+    PyObject *result = Py_None; // incremented at end of function
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|s", kwlist, &value, &name))
+        return NULL;
     
     ps_decoder_t * ps = get_ps_decoder_t(self);
     if (ps == NULL)
 	return NULL;
 
-    const char *err_msg = "Something went wrong while setting the JSGF grammar. Please check for "
-        "syntax or semantic errors.";
-    
-    // Set the value using ps_set_jsgf_string
-    if (jsgf_str && (ps_set_jsgf_string(ps, name, jsgf_str) < 0 ||
-		     ps_set_search(ps, PS_DEFAULT_SEARCH) < 0)) {
-	PyErr_SetString(PocketSphinxError, err_msg);
-	return NULL;
+    if (name == NULL)
+	name = PS_DEFAULT_SEARCH;
+
+    // TODO Do dictionary and LM checks for missing words - maybe add them using 
+    // ps_add_word
+
+    int set_result = -1;
+    switch (search_type) {
+    case JSGF_FILE:
+	set_result = ps_set_jsgf_file(ps, name, value);
+	break;
+    case JSGF_STR:
+	set_result = ps_set_jsgf_string(ps, name, value);
+	break;
+    case LM_FILE:
+	set_result = ps_set_lm_file(ps, name, value);
+	break;
+    case FSG_FILE:
+	; // required because you cannot declare immediately after a label in C
+	// Get the config used to initialise the decoder
+	cmd_ln_t *config = get_cmd_ln_t(self);
+	// Create a fsg model from the file and set it using the search name
+	fsg_model_t *fsg = fsg_model_readfile(value, ps_get_logmath(ps),
+					      cmd_ln_float32_r(config, "-lw"));
+	if (!fsg) {
+	    set_result = -1;
+	    break;
+	}
+	
+	set_result = ps_set_fsg(ps, name, fsg);
+
+	// This should be done whether or not ps_set_fsg fails, apparently..
+	fsg_model_free(fsg);
+	break;
+    case KWS_FILE:
+	// TODO Allow use of a Python list of keyword arguments rather than a file
+	set_result = ps_set_kws(ps, name, value);
+	break;
+    case KWS_STR:
+	set_result = ps_set_keyphrase(ps, name, value);
+	break;
     }
 
-    if (jsgf_file && (ps_set_jsgf_file(ps, name, jsgf_file) < 0 ||
-		      ps_set_search(ps, name) < 0)) {
-        PyErr_SetString(PocketSphinxError, err_msg);
-        return NULL;
-     }
+    // Set the search if set_result is fine or set an error
+    if (set_result < 0 || (ps_set_search(ps, name) < 0)) {
+	PyErr_Format(PocketSphinxError, "something went wrong whilst setting up the "
+		     "Pocket Sphinx search with name '%s'.", name);
+	result = NULL;
+    }
 
+    // Keep the current search name up to date
     Py_XDECREF(self->search_name);
     self->search_name = Py_BuildValue("s", name);
     Py_INCREF(self->search_name);
-
-    Py_INCREF(Py_None);
-    return Py_None;
+    
+    Py_XINCREF(result);
+    return result;
 }
+
+
+PyObject *
+PSObj_set_jsgf_file_search(PSObj *self, PyObject *args, PyObject *kwds) {
+    return PSObj_set_search_internal(self, JSGF_FILE, args, kwds);
+}
+
+PyObject *
+PSObj_set_jsgf_str_search(PSObj *self, PyObject *args, PyObject *kwds) {
+    return PSObj_set_search_internal(self, JSGF_STR, args, kwds);
+}
+
+PyObject *
+PSObj_set_lm_search(PSObj *self, PyObject *args, PyObject *kwds) {
+    return PSObj_set_search_internal(self, LM_FILE, args, kwds);
+}
+
+PyObject *
+PSObj_set_fsg_search(PSObj *self, PyObject *args, PyObject *kwds) {
+    return PSObj_set_search_internal(self, FSG_FILE, args, kwds);
+}
+
+PyObject *
+PSObj_set_keyphrase_search(PSObj *self, PyObject *args, PyObject *kwds) {
+    return PSObj_set_search_internal(self, KWS_STR, args, kwds);
+}
+
+PyObject *
+PSObj_set_keyphrases_search(PSObj *self, PyObject *args, PyObject *kwds) {
+    return PSObj_set_search_internal(self, KWS_FILE, args, kwds);
+}
+
+// Define a macro for documenting multiple search methods
+#define PS_SEARCH_DOC_FOOTER(first_keyword_docstring)			\
+    "Setting an already used search name will replace that "		\
+    "Pocket Sphinx search.\n\n"						\
+    "Keyword arguments:\n"						\
+    first_keyword_docstring "\n"					\
+    "name -- name of the Pocket Sphinx search to set (default '"	\
+    PS_DEFAULT_SEARCH "')\n"						\
 
 PyMethodDef PSObj_methods[] = {
     {"process_audio",
      (PyCFunction)PSObj_process_audio, METH_O,  // takes self + one argument
-     PyDoc_STR("Process audio from an AudioData object and call the speech_start and "
-	       "hypothesis callbacks where necessary.")},
+     PyDoc_STR("Process audio from an AudioData object and call the speech_start "
+	       "and hypothesis callbacks where necessary.")},
     {"batch_process",
      (PyCFunction)PSObj_batch_process, METH_O,  // takes self + one argument
      PyDoc_STR("Process a list of AudioData objects and return a speech hypothesis "
 	       "or None.\n"
 	       "This method doesn't call speech_start or hypothesis callbacks.")},
-    {"set_jsgf_search",
-     (PyCFunction)PSObj_set_jsgf_search, METH_KEYWORDS | METH_VARARGS,
-     PyDoc_STR("Set the JSpeech Grammar Format grammar string or file path and "
-	       "optionally the name to use for the Pocket Sphinx search.\n "
-	       "Setting an old search name will replace that search.")},
+    {"set_jsgf_file_search",
+     (PyCFunction)PSObj_set_jsgf_file_search, METH_KEYWORDS | METH_VARARGS,
+     PyDoc_STR("Set a Pocket Sphinx search using a JSpeech Grammar Format grammar "
+	       "file.\n"
+	       PS_SEARCH_DOC_FOOTER("path -- file path to the JSGF file to use."))},
+    {"set_jsgf_str_search",
+     (PyCFunction)PSObj_set_jsgf_str_search, METH_KEYWORDS | METH_VARARGS,
+     PyDoc_STR("Set a Pocket Sphinx search using a JSpeech Grammar Format grammar "
+	       "string.\n"
+	       PS_SEARCH_DOC_FOOTER("str -- the JSGF string to use."))},
+    {"set_lm_search",
+     (PyCFunction)PSObj_set_lm_search, METH_KEYWORDS | METH_VARARGS,
+     PyDoc_STR("Set a Pocket Sphinx search using a language model file.\n"
+	       PS_SEARCH_DOC_FOOTER("path -- file path to the LM file to use."))},
+    {"set_fsg_search",
+     (PyCFunction)PSObj_set_fsg_search, METH_KEYWORDS | METH_VARARGS,
+     PyDoc_STR("Set a Pocket Sphinx search using a finite state grammar file.\n"
+	       PS_SEARCH_DOC_FOOTER("path -- file path to the FSG file to use."))},
+    {"set_keyphrase_search",
+     (PyCFunction)PSObj_set_keyphrase_search, METH_KEYWORDS | METH_VARARGS,
+     PyDoc_STR("Set a Pocket Sphinx search using a single keyphrase to listen for.\n"
+	       PS_SEARCH_DOC_FOOTER("keyphrase -- the keyphrase to listen for."))},
+    {"set_keyphrases_search",
+     (PyCFunction)PSObj_set_keyphrases_search, METH_KEYWORDS | METH_VARARGS,
+     PyDoc_STR("Set a Pocket Sphinx search using a file containing keyphrases to "
+	       "listen for.\n"
+	       PS_SEARCH_DOC_FOOTER("path -- file path to the keyphrases file to "
+				    "use."))},
     {NULL}  /* Sentinel */
 };
 

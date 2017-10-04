@@ -14,15 +14,25 @@
 #include <pocketsphinx.h>
 #include <sphinxbase/err.h>
 #include <sphinxbase/cmd_ln.h>
+#include <sphinxbase/fsg_model.h>
 
 #include "audio.h"
 #include "pyutil.h"
 
-typedef enum utterance_state_e {
+typedef enum {
     IDLE,
     STARTED,
     ENDED
 } utterance_state_t;
+
+typedef enum {
+    JSGF_FILE, // JSpeech Grammar Format search from file
+    JSGF_STR,  // JSpeech Grammar Format search from string
+    LM_FILE,   // Language model search from file
+    FSG_FILE,  // Finite state grammar search from file
+    KWS_FILE,  // Key word/phrase search from file
+    KWS_STR    // Key word/phrase search from string
+} ps_search_type;
 
 typedef struct {
     PyObject_HEAD
@@ -46,7 +56,26 @@ PyObject *
 PSObj_batch_process(PSObj *self, PyObject *list);
 
 PyObject *
-PSObj_set_jsgf_search(PSObj *self, PyObject *args, PyObject *kwds);
+PSObj_set_search_internal(PSObj *self, ps_search_type search_type,
+			  PyObject *args, PyObject *kwds);
+
+PyObject *
+PSObj_set_jsgf_file_search(PSObj *self, PyObject *args, PyObject *kwds);
+
+PyObject *
+PSObj_set_jsgf_str_search(PSObj *self, PyObject *args, PyObject *kwds);
+
+PyObject *
+PSObj_set_lm_search(PSObj *self, PyObject *args, PyObject *kwds);
+
+PyObject *
+PSObj_set_fsg_search(PSObj *self, PyObject *args, PyObject *kwds);
+
+PyObject *
+PSObj_set_keyphrase_search(PSObj *self, PyObject *args, PyObject *kwds);
+
+PyObject *
+PSObj_set_keyphrases_search(PSObj *self, PyObject *args, PyObject *kwds);
 
 PyObject *
 PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
