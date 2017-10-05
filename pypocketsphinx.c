@@ -450,13 +450,12 @@ PSObj_get_in_speech(PSObj *self, void *closure) {
     ps_decoder_t * ps = get_ps_decoder_t(self);
     if (ps != NULL) {
 	uint8 in_speech = ps_get_in_speech(ps);
-	if (in_speech) {
-	    Py_INCREF(Py_True);
+	if (in_speech)
 	    result = Py_True;
-	} else {
-	    Py_INCREF(Py_False);
+	else
 	    result = Py_False;
-	}
+
+	Py_INCREF(result);
     }
 
     return result;
