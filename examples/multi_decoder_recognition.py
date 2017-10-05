@@ -13,7 +13,7 @@ def main():
     public <greet> = hi <name>;
     <name> = peter | john | mary | anna;
     """
-    ps1.set_jsgf_search(grammar)
+    ps1.set_jsgf_str_search(grammar)
     hyp = None
     
     def jsgf_hyp_callback(s):

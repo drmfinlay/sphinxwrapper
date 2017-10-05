@@ -16,7 +16,7 @@ def main():
     ps.hypothesis_callback = hyp_callback
 
     # Set up the decoder with a JSGF grammar
-    ps.set_jsgf_search("""
+    ps.set_jsgf_str_search("""
     #JSGF V1.0 UTF-8 en;
     grammar g;
     public <greet> = hi <name>;
