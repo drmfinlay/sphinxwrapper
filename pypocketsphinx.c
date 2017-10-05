@@ -209,7 +209,7 @@ PSObj_set_search_internal(PSObj *self, ps_search_type search_type,
 
     // Set the search if set_result is fine or set an error
     if (set_result < 0 || (ps_set_search(ps, name) < 0)) {
-	PyErr_Format(PocketSphinxError, "something went wrong whilst setting up the "
+	PyErr_Format(PocketSphinxError, "something went wrong whilst setting up a "
 		     "Pocket Sphinx search with name '%s'.", name);
 	result = NULL;
     }
@@ -399,6 +399,7 @@ PSObj_init(PSObj *self, PyObject *args, PyObject *kwds) {
 #if PY_MAJOR_VERSION >= 3
 	    if (!PyUnicode_Check(item)) {
 		PyErr_SetString(PyExc_TypeError, err_msg);
+		return -1;
 	    }
 
 	    strings[i] = PyUnicode_AsUTF8(item);
@@ -480,7 +481,7 @@ PSObj_set_speech_start_callback(PSObj *self, PyObject *value, void *closure) {
 	return -1;
     }
 
-#if PY_MAJOR_VERSION >= 2 && PY_MAJOR_VERSION < 3
+#if PY_MAJOR_VERSION == 2
     if (!assert_callable_arg_count(value, 0))
 	return -1;
 #endif
@@ -505,7 +506,7 @@ PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure) {
 	return -1;
     }
 
-#if PY_MAJOR_VERSION >= 2 && PY_MAJOR_VERSION < 3
+#if PY_MAJOR_VERSION == 2
     if (!assert_callable_arg_count(value, 1))
 	return -1;
 #endif
