@@ -255,13 +255,14 @@ PSObj_set_keyphrases_search(PSObj *self, PyObject *args, PyObject *kwds) {
 }
 
 // Define a macro for documenting multiple search methods
-#define PS_SEARCH_DOC_FOOTER(first_keyword_docstring)			\
-    "Setting an already used search name will replace that "		\
-    "Pocket Sphinx search.\n\n"						\
-    "Keyword arguments:\n"						\
-    first_keyword_docstring "\n"					\
-    "name -- name of the Pocket Sphinx search to set (default '"	\
-    PS_DEFAULT_SEARCH "')\n"						\
+#define PS_SEARCH_DOCSTRING(first_line, first_keyword_docstring)	\
+    PyDoc_STR(first_line "\n"						\
+	      "Setting an already used search name will replace that "	\
+	      "Pocket Sphinx search.\n\n"				\
+	      "Keyword arguments:\n"					\
+	      first_keyword_docstring "\n"				\
+	      "name -- name of the Pocket Sphinx search to set "	\
+	      "(default '" PS_DEFAULT_SEARCH "')\n")
 
 PyMethodDef PSObj_methods[] = {
     {"process_audio",
@@ -275,32 +276,34 @@ PyMethodDef PSObj_methods[] = {
 	       "This method doesn't call speech_start or hypothesis callbacks.")},
     {"set_jsgf_file_search",
      (PyCFunction)PSObj_set_jsgf_file_search, METH_KEYWORDS | METH_VARARGS,
-     PyDoc_STR("Set a Pocket Sphinx search using a JSpeech Grammar Format grammar "
-	       "file.\n"
-	       PS_SEARCH_DOC_FOOTER("path -- file path to the JSGF file to use."))},
+     PS_SEARCH_DOCSTRING(
+	 "Set a Pocket Sphinx search using a JSpeech Grammar Format grammar file",
+	 "path -- file path to the JSGF file to use.")},
     {"set_jsgf_str_search",
      (PyCFunction)PSObj_set_jsgf_str_search, METH_KEYWORDS | METH_VARARGS,
-     PyDoc_STR("Set a Pocket Sphinx search using a JSpeech Grammar Format grammar "
-	       "string.\n"
-	       PS_SEARCH_DOC_FOOTER("str -- the JSGF string to use."))},
+     PS_SEARCH_DOCSTRING(
+	 "Set a Pocket Sphinx search using a JSpeech Grammar Format grammar string.",
+	 "str -- the JSGF string to use.")},
     {"set_lm_search",
      (PyCFunction)PSObj_set_lm_search, METH_KEYWORDS | METH_VARARGS,
-     PyDoc_STR("Set a Pocket Sphinx search using a language model file.\n"
-	       PS_SEARCH_DOC_FOOTER("path -- file path to the LM file to use."))},
+     PS_SEARCH_DOCSTRING(
+	 "Set a Pocket Sphinx search using a language model file.",
+	 "path -- file path to the LM file to use.")},
     {"set_fsg_search",
      (PyCFunction)PSObj_set_fsg_search, METH_KEYWORDS | METH_VARARGS,
-     PyDoc_STR("Set a Pocket Sphinx search using a finite state grammar file.\n"
-	       PS_SEARCH_DOC_FOOTER("path -- file path to the FSG file to use."))},
+     PS_SEARCH_DOCSTRING(
+	 "Set a Pocket Sphinx search using a finite state grammar file.",
+	 "path -- file path to the FSG file to use.")},
     {"set_keyphrase_search",
      (PyCFunction)PSObj_set_keyphrase_search, METH_KEYWORDS | METH_VARARGS,
-     PyDoc_STR("Set a Pocket Sphinx search using a single keyphrase to listen for.\n"
-	       PS_SEARCH_DOC_FOOTER("keyphrase -- the keyphrase to listen for."))},
+     PS_SEARCH_DOCSTRING(
+	 "Set a Pocket Sphinx search using a single keyphrase to listen for.",
+	 "keyphrase -- the keyphrase to listen for.")},
     {"set_keyphrases_search",
      (PyCFunction)PSObj_set_keyphrases_search, METH_KEYWORDS | METH_VARARGS,
-     PyDoc_STR("Set a Pocket Sphinx search using a file containing keyphrases to "
-	       "listen for.\n"
-	       PS_SEARCH_DOC_FOOTER("path -- file path to the keyphrases file to "
-				    "use."))},
+     PS_SEARCH_DOCSTRING(
+	 "Set a Pocket Sphinx search using a file containing keyphrases to listen "
+	 "for.", "path -- file path to the keyphrases file to use.")},
     {NULL}  /* Sentinel */
 };
 
