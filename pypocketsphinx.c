@@ -463,7 +463,7 @@ PSObj_get_in_speech(PSObj *self, void *closure) {
 }
 
 PyObject *
-PSObj_get_search_name(PSObj *self, void *closure) {
+PSObj_get_active_search(PSObj *self, void *closure) {
     Py_INCREF(self->search_name);
     return self->search_name;
 }
@@ -518,6 +518,52 @@ PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure) {
     return 0;
 }
 
+int
+PSObj_set_active_search(PSObj *self, PyObject *value, void *closure) {
+    if (value == NULL) {
+        PyErr_SetString(PyExc_AttributeError, "Cannot delete the active_search "
+			"attribute.");
+        return -1;
+    }
+
+    ps_decoder_t * ps = get_ps_decoder_t(self);
+    if (ps == NULL)
+	return -1;
+
+    const char* new_search_name;
+    const char* err_msg = "value must be a string.";
+
+#if PY_MAJOR_VERSION >= 3
+    if (!PyUnicode_Check(value)) {
+	PyErr_SetString(PyExc_TypeError, err_msg);
+	return -1;
+    }
+
+    new_search_name = PyUnicode_AsUTF8(value);
+#else
+    if (!PyString_Check(value)) {
+	PyErr_SetString(PyExc_TypeError, err_msg);
+	return -1;
+    }
+
+    new_search_name = PyString_AsString(value);
+#endif
+
+    // Set the search and raise an error if something goes wrong
+    if (ps_set_search(ps, new_search_name) < 0) {
+	PyErr_Format(PocketSphinxError, "failed to set Pocket Sphinx search with "
+		     "name '%s'. Perhaps there isn't a search with that name?",
+		     new_search_name);
+	return -1;
+    }
+
+    // Keep the current search name up to date
+    Py_XDECREF(self->search_name);
+    self->search_name = value;
+    Py_INCREF(self->search_name);
+    return 0;
+}
+
 PyGetSetDef PSObj_getseters[] = {
     {"speech_start_callback",
      (getter)PSObj_get_speech_start_callback,
@@ -532,9 +578,12 @@ PyGetSetDef PSObj_getseters[] = {
      (getter)PSObj_get_in_speech, NULL, // No setter. AttributeError is thrown on set attempt.
      // From pocketsphinx.h:
      "Checks if the last feed audio buffer contained speech.", NULL},
-    {"search_name",
-     (getter)PSObj_get_search_name, NULL,
-     "Get the current pocket sphinx search name.", NULL},
+    {"active_search",
+     (getter)PSObj_get_active_search,
+     (setter)PSObj_set_active_search,
+     "The name of the currently active Pocket Sphinx search.\n"
+     "If the setter is passed a name with no matching Pocket Sphinx search, an "
+     "error will be raised.", NULL},
     {NULL}  /* Sentinel */
 };
 

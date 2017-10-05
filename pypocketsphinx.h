@@ -108,13 +108,16 @@ PyObject *
 PSObj_get_in_speech(PSObj *self, void *closure);
 
 PyObject *
-PSObj_get_search_name(PSObj *self, void *closure);
+PSObj_get_active_search(PSObj *self, void *closure);
 
 int
 PSObj_set_speech_start_callback(PSObj *self, PyObject *value, void *closure);
 
 int
 PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure);
+
+int
+PSObj_set_active_search(PSObj *self, PyObject *value, void *closure);
 
 PyTypeObject PSType;
 
