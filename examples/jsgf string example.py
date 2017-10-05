@@ -15,7 +15,7 @@ def main():
     ps.speech_start_callback = speech_start_callback
     ps.hypothesis_callback = hyp_callback
 
-    # Set up the decoder with a JSGF grammar
+    # Set up the decoder with a JSGF grammar sring
     ps.set_jsgf_str_search("""
     #JSGF V1.0 UTF-8 en;
     grammar g;
@@ -28,8 +28,7 @@ def main():
     ad.open()
     ad.record()
     while True:
-        audio = ad.read_audio()
-        ps.process_audio(audio)
+        ps.process_audio(ad.read_audio())
         time.sleep(0.1)
 
 if __name__ == "__main__":
