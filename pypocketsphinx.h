@@ -48,9 +48,10 @@
 #include <stdbool.h>
 #include <Python.h>
 #include <pocketsphinx.h>
-#include <sphinxbase/err.h>
 #include <sphinxbase/cmd_ln.h>
+#include <sphinxbase/err.h>
 #include <sphinxbase/fsg_model.h>
+#include <sphinxbase/prim_type.h>
 
 #include "audio.h"
 #include "pyutil.h"
@@ -112,6 +113,12 @@ PSObj_set_keyphrase_search(PSObj *self, PyObject *args, PyObject *kwds);
 
 PyObject *
 PSObj_set_keyphrases_search(PSObj *self, PyObject *args, PyObject *kwds);
+
+PyObject *
+PSObj_set_config_argument(PSObj *self, PyObject *args, PyObject *kwds);
+
+PyObject *
+PSObj_get_config_argument(PSObj *self, PyObject *args, PyObject *kwds);
 
 PyObject *
 PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds);

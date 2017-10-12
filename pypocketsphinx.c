@@ -290,6 +290,149 @@ PSObj_set_keyphrases_search(PSObj *self, PyObject *args, PyObject *kwds) {
     return PSObj_set_search_internal(self, KWS_FILE, args, kwds);
 }
 
+PyObject *
+PSObj_set_config_argument(PSObj *self, PyObject *args, PyObject *kwds) {
+    cmd_ln_t *config = get_cmd_ln_t(self);
+    if (config == NULL)
+	return NULL;
+
+    static char *kwlist[] = {"name", "value", "reinitialise", NULL};
+    const char *name = NULL;
+    const char *value = NULL;
+
+    // True by default. No need to increment this because it's only used internally.
+    PyObject *reinitialise = Py_True;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|O", kwlist, &name, &value,
+				     &reinitialise))
+        return NULL;
+
+    if (!PyBool_Check(reinitialise)) {
+	PyErr_SetString(PyExc_TypeError, "'reinitialise' parameter must be a "
+			"boolean value.");
+	return NULL;
+    }
+
+    // Set the named configuration argument if it exists or raise an error if it
+    // doesn't or if setting the value fails
+    if (cmd_ln_exists_r(config, name)) {
+	config = cmd_ln_init(config, cont_args_def, false, name, value, NULL);
+	if (config == NULL) {
+	    PyErr_Format(PyExc_ValueError, "failed to set Sphinx configuration "
+			 "argument with the name '%s'.", name);
+	    return NULL;
+	}
+    } else {
+	// Value doesn't exist. While this is not a Python dictionary lookup failure,
+	// KeyError is an appropriate enough exception to raise here.
+	PyErr_Format(PyExc_KeyError, "there is no Sphinx configuration argument "
+		     "with the name '%s'.", name);
+	return NULL;
+    }
+
+    if (reinitialise == Py_True) {
+	ps_decoder_t *ps = get_ps_decoder_t(self);
+	if (ps == NULL)
+	    return NULL;
+	if (ps_reinit(ps, NULL) < 0) {
+	    PyErr_SetString(PocketSphinxError, "failed to reinitialise Pocket "
+			    "Sphinx.");
+	    return NULL;
+	}
+    }
+
+    self->config = config;
+
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+PyObject *
+PSObj_get_config_argument(PSObj *self, PyObject *args, PyObject *kwds) {
+    PyObject *result;
+    static char *kwlist[] = {"name", NULL};
+    const char *name = NULL;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist, &name))
+        return NULL;
+
+    cmd_ln_t *config = get_cmd_ln_t(self);
+    ps_decoder_t *ps = get_ps_decoder_t(self);
+    if (config == NULL || ps == NULL)
+	return NULL;
+    
+    // Find the named argument because we need its type
+    const arg_t *argument = NULL;
+    for (size_t i = 0; i < sizeof(cont_args_def) / sizeof(const arg_t); i++) {
+	if (cont_args_def[i].name != NULL &&
+	    strcmp(cont_args_def[i].name, name) == 0) {
+	    argument = &cont_args_def[i];
+	    break;
+	}
+    }
+
+    if (argument == NULL) {
+	PyErr_Format(PyExc_KeyError, "there is no Sphinx configuration argument "
+		     "with the name '%s'.", name);
+	return NULL;
+    }
+    
+    anytype_t *type = cmd_ln_access_r(config, name);
+    const char *str;
+    
+    switch (argument->type) {
+    case ARG_INTEGER:
+    case REQARG_INTEGER:
+	result = Py_BuildValue("l", type->i);
+	break;
+    case ARG_FLOATING:
+    case REQARG_FLOATING:
+	result = Py_BuildValue("d", type->fl);
+	break;
+    case ARG_STRING:
+    case REQARG_STRING:
+	if (type->ptr == NULL)
+	    str = "";
+	else
+	    str = (const char *)type->ptr;
+	result = Py_BuildValue("s", str);
+	break;
+    case ARG_STRING_LIST:
+	// Note: this doesn't appear to be used anywhere in sphinxbase or
+	// pocketsphinx, so I'm not putting any more time into making it work.
+	// This is loosely based on the cmd_ln_print_values_r implementation in
+	// sphinxbase/cmd_ln.c
+	
+	/* ;
+        const char **array;
+    	array = (const char**)type->ptr;
+    	if (array) {
+    	    // Create a Python tuple of the same length containing all strings in
+    	    // the list
+    	    size_t length = sizeof(array) / sizeof(const char *);
+	    printf("length %lu ", length);
+    	    result = PyList_New((Py_ssize_t)0);
+    	    for (size_t i = 0; i < length; i++) {
+    		PyList_Append(result, Py_BuildValue("s", array[i]));
+    	    }
+
+    	    result = PyList_AsTuple(result);
+	    }
+	*/
+	result = Py_BuildValue("()");
+    	break;
+    case ARG_BOOLEAN:
+    case REQARG_BOOLEAN:
+	result = Py_BuildValue("O", type->i ? Py_True : Py_False);
+	break;
+    default:
+	result = Py_None;
+    }
+
+    Py_XINCREF(result);
+    return result;
+}
+
 // Define a macro for documenting multiple search methods
 #define PS_SEARCH_DOCSTRING(first_line, first_keyword_docstring)	\
     PyDoc_STR(first_line "\n"						\
@@ -342,6 +485,21 @@ PyMethodDef PSObj_methods[] = {
      PS_SEARCH_DOCSTRING(
 	 "Set a Pocket Sphinx search using a file containing keyphrases to listen "
 	 "for.", "path -- file path to the keyphrases file to use.")},
+    {"set_config_argument",
+     (PyCFunction)PSObj_set_config_argument, METH_KEYWORDS | METH_VARARGS,
+     PyDoc_STR(
+	 "Set a Sphinx decoder configuration argument.\n"
+	 "Keyword arguments:\n"
+	 "name -- the name of the configuration argument to set.\n"
+	 "value -- the new value for the configuration argument.\n"
+	 "reinitialise -- whether to reinitialise this decoder after setting the "
+	 "argument (default True).\n")},
+    {"get_config_argument",
+     (PyCFunction)PSObj_get_config_argument, METH_KEYWORDS | METH_VARARGS,
+     PyDoc_STR(
+	 "Get the value of a Sphinx decoder configuration argument.\n"
+	 "Keyword arguments:\n"
+	 "name -- the name of the configuration argument to get.\n")},
     {NULL}  /* Sentinel */
 };
 
