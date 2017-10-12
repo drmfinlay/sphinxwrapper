@@ -174,7 +174,7 @@ PSObj_batch_process(PSObj *self, PyObject *list) {
 
 PyObject *
 PSObj_set_search_internal(PSObj *self, ps_search_type search_type,
-			  PyObject *args,PyObject *kwds) {
+			  PyObject *args, PyObject *kwds) {
     // Set up the keyword list
     char *req_kw;
     switch (search_type) {
@@ -303,13 +303,15 @@ PSObj_set_keyphrases_search(PSObj *self, PyObject *args, PyObject *kwds) {
 PyMethodDef PSObj_methods[] = {
     {"process_audio",
      (PyCFunction)PSObj_process_audio, METH_O,  // takes self + one argument
-     PyDoc_STR("Process audio from an AudioData object and call the speech_start "
-	       "and hypothesis callbacks where necessary.")},
+     PyDoc_STR(
+	 "Process audio from an AudioData object and call the speech_start and "
+	 "hypothesis callbacks where necessary.\n")},
     {"batch_process",
      (PyCFunction)PSObj_batch_process, METH_O,  // takes self + one argument
-     PyDoc_STR("Process a list of AudioData objects and return a speech hypothesis "
-	       "or None.\n"
-	       "This method doesn't call speech_start or hypothesis callbacks.")},
+     PyDoc_STR(
+	 "Process a list of AudioData objects and return a speech hypothesis or "
+	 "None.\n"
+	 "This method doesn't call speech_start or hypothesis callbacks.\n")},
     {"set_jsgf_file_search",
      (PyCFunction)PSObj_set_jsgf_file_search, METH_KEYWORDS | METH_VARARGS,
      PS_SEARCH_DOCSTRING(
