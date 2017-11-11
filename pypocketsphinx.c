@@ -105,6 +105,7 @@ PSObj_process_audio_internal(PSObj *self, PyObject *audio_data,
     } else if (!in_speech && self->utterance_state == STARTED) {
         /* speech -> silence transition, time to start new utterance  */
         ps_end_utt(ps);
+        self->utterance_state = ENDED;
         char const *hyp = ps_get_hyp(ps, NULL);
 	
         // Call the Python hypothesis callback if it is callable
@@ -128,8 +129,6 @@ PSObj_process_audio_internal(PSObj *self, PyObject *audio_data,
             // Return the hypothesis instead
             result = Py_BuildValue("s", hyp);
         }
-        
-        self->utterance_state = ENDED;
     }
 
     Py_XINCREF(result);
