@@ -47,11 +47,11 @@ initsphinxwrapper(void) {
     // Set up the 'PocketSphinx' type and anything else it needs
     // Return appropriately for the Python version if there's an error
     if (initpocketsphinx(module) == NULL)
-	INITERROR;
+        INITERROR;
 
     // Set up the audio related types
     if (initaudio(module) == NULL)
-	INITERROR;
+        INITERROR;
 
 #if PY_MAJOR_VERSION >= 3
     return module;
@@ -64,7 +64,7 @@ main(int argc, char *argv[]) {
     /* Pass argv[0] to the Python interpreter */
     wchar_t *program = Py_DecodeLocale(argv[0], NULL);
     if (program == NULL) {
-	fprintf(stderr, "Fatal error: cannot decode argv[0]\n");
+        fprintf(stderr, "Fatal error: cannot decode argv[0]\n");
         exit(1);
     }
 #else

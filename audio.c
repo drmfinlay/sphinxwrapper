@@ -65,7 +65,7 @@ PyTypeObject AudioDataType = {
     0,                                /* tp_setattro */
     0,                                /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT |
-        Py_TPFLAGS_BASETYPE,          /* tp_flags */
+    Py_TPFLAGS_BASETYPE,              /* tp_flags */
     "Audio data objects containing "
     "an audio buffer to process.",    /* tp_doc */
     0,                                /* tp_traverse */
@@ -90,9 +90,8 @@ PyTypeObject AudioDataType = {
 PyObject *
 AudioDeviceObj_open(AudioDeviceObj *self) {
     if (self->open) {
-	PyErr_SetString(AudioDeviceError,
-                        "Audio device is already open.");
-	return NULL;
+        PyErr_SetString(AudioDeviceError, "Audio device is already open.");
+        return NULL;
     }
     const char *dev = NULL;
 
@@ -100,17 +99,18 @@ AudioDeviceObj_open(AudioDeviceObj *self) {
     // This is operation is different in Python 2.7 and 3+
 #if PY_MAJOR_VERSION >= 3
     if (PyUnicode_Check(self->name)) {
-	dev = PyUnicode_AsUTF8(self->name);
+        dev = PyUnicode_AsUTF8(self->name);
+    }
 #else
     if (PyString_Check(self->name)) {
-	dev = PyString_AsString(self->name);
-#endif
+        dev = PyString_AsString(self->name);
     }
+#endif
 
     if (self->name != Py_None && dev == NULL) {
-	// There was an error in the PyString_AsString or PyUnicode_AsUTF8 functions
-	// so assume a Python error message was set and return NULL
-	return NULL;
+        // There was an error in the PyString_AsString or PyUnicode_AsUTF8 functions
+        // so assume a Python error message was set and return NULL
+        return NULL;
     }
 
     // Doesn't matter if dev is NULL; ad_open_dev will use the
@@ -139,15 +139,14 @@ AudioDeviceObj_record(AudioDeviceObj *self) {
     }
 
     if (self->ad == NULL) {
-        PyErr_SetString(AudioDeviceError,
-			"Failed to start recording: device is not open.");
-	return NULL;
+        PyErr_SetString(AudioDeviceError, "Failed to start recording: device is "
+                        "not open.");
+        return NULL;
     }
 
     if (ad_start_rec(self->ad) < 0) {
-        PyErr_SetString(AudioDeviceError,
-			"Failed to start recording.");
-	return NULL;
+        PyErr_SetString(AudioDeviceError, "Failed to start recording.");
+        return NULL;
     }
 
     self->recording = true;
@@ -166,8 +165,7 @@ AudioDeviceObj_stop_recording(AudioDeviceObj *self) {
 
     if (self->ad != NULL) {
         if (ad_stop_rec(self->ad) < 0) {
-            PyErr_SetString(AudioDeviceError,
-                            "Failed to stop recording.");
+            PyErr_SetString(AudioDeviceError, "Failed to stop recording.");
             return NULL;
         }
     }
@@ -193,10 +191,10 @@ AudioDeviceObj_close(AudioDeviceObj *self) {
         }
 
         if (!self->open) {
-	    PyErr_SetString(AudioDeviceError,
+            PyErr_SetString(AudioDeviceError,
                             "Audio device is already closed.");
             return NULL;
-	}
+        }
 
         if (ad_close(ad) < 0) {
             PyErr_SetString(AudioDeviceError,
@@ -217,7 +215,7 @@ AudioDeviceObj_read_audio(AudioDeviceObj *self) {
     if (self->ad == NULL) {
         PyErr_SetString(AudioDeviceError,
                         "Failed to read audio. Have you called open() and "
-			"record()?");
+                        "record()?");
         return NULL;
     }
 
@@ -227,8 +225,8 @@ AudioDeviceObj_read_audio(AudioDeviceObj *self) {
 
     int32 n_samples = ad_read(self->ad, audio_data_c->audio_buffer, 2048);
     if (n_samples < 0) {
-	PyErr_SetString(AudioDeviceError, "Failed to read audio.");
-	return NULL;
+        PyErr_SetString(AudioDeviceError, "Failed to read audio.");
+        return NULL;
     }
 
     audio_data_c->n_samples = n_samples;
@@ -260,7 +258,7 @@ AudioDeviceObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     if (self != NULL) {
         // Ensure the 'ad' member used when opening and recording
         // from audio devices is set to NULL for now.
-	self->ad = NULL;
+        self->ad = NULL;
 
         Py_INCREF(Py_None);
         self->name = Py_None;
@@ -292,19 +290,24 @@ AudioDeviceObj_init(AudioDeviceObj *self, PyObject *args, PyObject *kwds) {
 int
 AudioDeviceObj_set_name(AudioDeviceObj *self, PyObject *value, void *closure) {
     if (value == NULL) {
-	PyErr_SetString(PyExc_AttributeError, "cannot delete the name attribute.");
+        PyErr_SetString(PyExc_AttributeError, "cannot delete the name attribute.");
         return -1;
     }
 #if PY_MAJOR_VERSION >= 3
     if (PyUnicode_Check(value) || value == Py_None) {
+        Py_DECREF(self->name);
+        self->name = value;
+        Py_INCREF(self->name);
+    }
 #else
     if (PyString_Check(value) || value == Py_None) {
-#endif
-	Py_DECREF(self->name);
+      	Py_DECREF(self->name);
         self->name = value;
-	Py_INCREF(self->name);
-    } else {
-         PyErr_SetString(PyExc_TypeError, "value must be a string or None.");
+        Py_INCREF(self->name);  
+    }
+#endif
+    else {
+        PyErr_SetString(PyExc_TypeError, "value must be a string or None.");
         return -1;
     }
 
@@ -330,7 +333,7 @@ PyMethodDef AudioDeviceObj_methods[] = {
     {"read_audio",
      (PyCFunction)AudioDeviceObj_read_audio, METH_NOARGS,
      PyDoc_STR("Read audio from the audio device if it is open and recording.\n"
-	       ":rtype: AudioData")},
+               ":rtype: AudioData")},
     {"close",
      (PyCFunction)AudioDeviceObj_close, METH_NOARGS,
      PyDoc_STR("If it's open, close the audio device.")},
@@ -366,7 +369,7 @@ PyTypeObject AudioDeviceType = {
     0,                                  /* tp_setattro */
     0,                                  /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT |
-        Py_TPFLAGS_BASETYPE,            /* tp_flags */
+    Py_TPFLAGS_BASETYPE,            /* tp_flags */
     "Audio device object for reading "
     "audio from an audio device.",      /* tp_doc */
     0,                                  /* tp_traverse */
@@ -406,7 +409,7 @@ initaudio(PyObject *module) {
     // Set up the AudioDevice type using a non-generic new method
     AudioDeviceType.tp_new = AudioDeviceObj_new;
     if (PyType_Ready(&AudioDeviceType) < 0) {
-	return NULL;
+        return NULL;
     }
 
     Py_INCREF(&AudioDeviceType);

@@ -84,7 +84,7 @@ typedef struct {
 
 PyObject *
 PSObj_process_audio_internal(PSObj *self, PyObject *audio_data,
-			     bool call_callbacks);
+                             bool call_callbacks);
 
 PyObject *
 PSObj_process_audio(PSObj *self, PyObject *audio_data);
@@ -94,7 +94,7 @@ PSObj_batch_process(PSObj *self, PyObject *list);
 
 PyObject *
 PSObj_set_search_internal(PSObj *self, ps_search_type search_type,
-			  PyObject *args, PyObject *kwds);
+                          PyObject *args, PyObject *kwds);
 
 PyObject *
 PSObj_set_jsgf_file_search(PSObj *self, PyObject *args, PyObject *kwds);
