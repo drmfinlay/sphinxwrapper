@@ -44,6 +44,8 @@ static PyMethodDef sphinxwrapper_methods[] = {
 };
 
 #if PY_MAJOR_VERSION >= 3
+#define INIT_SPHINX_WRAPPER PyInit_sphinxwrapper
+
 // Python 3 extensions define modules similar to the way custom types are defined
 static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
@@ -57,12 +59,12 @@ static struct PyModuleDef moduledef = {
     NULL                         /* m_free */
 };
 
-PyMODINIT_FUNC
-PyInit_sphinxwrapper(void) {
 #else
-PyMODINIT_FUNC
-initsphinxwrapper(void) {
+#define INIT_SPHINX_WRAPPER initsphinxwrapper
 #endif
+
+PyMODINIT_FUNC
+INIT_SPHINX_WRAPPER(void) {
 #if PY_MAJOR_VERSION >= 3
     PyObject *module = PyModule_Create(&moduledef);
 #else
@@ -103,10 +105,5 @@ main(int argc, char *argv[]) {
     PyEval_InitThreads();
 
     /* Add a static module */
-#if PY_MAJOR_VERSION >= 3
-    PyInit_sphinxwrapper();
-#else
-    initsphinxwrapper();
-#endif
+    INIT_SPHINX_WRAPPER();
 }
-
