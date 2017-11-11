@@ -15,7 +15,7 @@ def main():
     ps.speech_start_callback = speech_start_callback
     ps.hypothesis_callback = hyp_callback
 
-    # Set up the decoder with a JSGF grammar sring
+    # Set up the decoder with a JSGF grammar string
     ps.set_jsgf_str_search("""
     #JSGF V1.0 UTF-8 en;
     grammar g;
