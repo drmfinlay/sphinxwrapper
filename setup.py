@@ -8,9 +8,14 @@ module1 = Extension('sphinxwrapper',
                         'pyutil.c'
                     ],
                     include_dirs = [
+                        'include',
                         '/usr/local/include',
                         '/usr/local/include/sphinxbase',
-                        '/usr/local/include/pocketsphinx'
+                        '/usr/local/include/pocketsphinx',
+                        '/usr/include',
+                        '/usr/include/sphinxbase',
+                        '/usr/include/pocketsphinx'
+
                     ],
                     libraries = [
                         'pocketsphinx',
