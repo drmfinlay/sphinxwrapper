@@ -1,13 +1,13 @@
 from distutils.core import setup, Extension
 
 module1 = Extension('sphinxwrapper',
-                    sources = [
+                    sources=[
                         'sphinxwrapper.c',
                         'pypocketsphinx.c',
                         'audio.c',
                         'pyutil.c'
                     ],
-                    include_dirs = [
+                    include_dirs=[
                         'include',
                         '/usr/local/include',
                         '/usr/local/include/sphinxbase',
@@ -17,16 +17,16 @@ module1 = Extension('sphinxwrapper',
                         '/usr/include/pocketsphinx'
 
                     ],
-                    libraries = [
+                    libraries=[
                         'pocketsphinx',
                         'sphinxbase',
                         'sphinxad'
                     ],
-                    library_dirs = ['/usr/local/lib']
-)
+                    library_dirs=['/usr/local/lib']
+                    )
 
-setup (name = 'SphinxWrapper',
-       version = '1.1',
-       description = 'Python C extension for Pocket Sphinx and '
-       'other CMU Sphinx libraries',
-       ext_modules = [module1])
+setup(name='sphinxwrapper',
+      version='1.1',
+      description='Python C extension for Pocket Sphinx and '
+                  'other CMU Sphinx libraries',
+      ext_modules=[module1])
