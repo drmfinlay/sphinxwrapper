@@ -15,9 +15,18 @@ This project has the following library dependencies:
 I've tested both *sphinxbase* and *pocketsphinx* using version **0.8+5prealpha-3**. It is best to match the versions for these 2 dependencies.
 
 ### Debian GNU/Linux
-Install the dependencies on Debian using the following:
+Install the CMU Sphinx dependencies on Debian using the following:
 ``` Shell
-$ sudo apt install pocketsphinx sphinxbase-utils
+sudo apt install libpocketsphinx-dev libpocketsphinx3 libsphinxbase-dev libsphinxbase3 pocketsphinx pocketsphinx-en-us
+```
+
+Note: `pocketsphinx-en-us` contains both models (LM and HMM) and the pronunciation dictionary for US English. Other models and dictionaries are available [from sourceforge](https://sourceforge.net/projects/cmusphinx/files/Acoustic%20and%20Language%20Models/). You can also build your own language model. There is information on that [here](https://cmusphinx.github.io/wiki/tutoriallm/#language-models), although it is rather involved.
+
+You'll also need to install the dev package for the version of Python you want to use.
+
+``` Shell
+sudo apt install python-dev
+sudo apt install python3-dev
 ```
 
 ### Compiling dependencies from source
