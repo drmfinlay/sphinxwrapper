@@ -364,7 +364,7 @@ PyMethodDef AudioDeviceObj_methods[] = {
      PyDoc_STR("Start recording from the audio device.")},
     {"stop_recording",
      (PyCFunction)AudioDeviceObj_stop_recording, METH_NOARGS,
-     PyDoc_STR("Start recording from the audio device.")},
+     PyDoc_STR("Stop recording from the audio device.")},
     {"read_audio",
      (PyCFunction)AudioDeviceObj_read_audio, METH_NOARGS,
      PyDoc_STR("Read audio from the audio device if it is open and recording.\n"
