@@ -171,6 +171,21 @@ PSObj_batch_process(PSObj *self, PyObject *list) {
 }
 
 PyObject *
+PSObj_end_utterance(PSObj *self) {
+    ps_decoder_t * ps = get_ps_decoder_t(self);
+    if (ps == NULL)
+        return NULL;
+
+    if (self->utterance_state != ENDED) {
+        ps_end_utt(ps);
+        self->utterance_state = ENDED;
+    }
+
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+PyObject *
 PSObj_set_search_internal(PSObj *self, ps_search_type search_type,
                           PyObject *args, PyObject *kwds) {
     // Set up the keyword list
@@ -453,6 +468,12 @@ PyMethodDef PSObj_methods[] = {
          "Process a list of AudioData objects and return a speech hypothesis or "
          "None.\n"
          "This method doesn't call speech_start or hypothesis callbacks.\n")},
+    {"end_utterance",
+     (PyCFunction)PSObj_end_utterance, METH_NOARGS,  // takes no arguments
+     PyDoc_STR(
+         "End the current utterance if one was in progress.\n"
+         "This method may be used, for example, to reset processing of audio via "
+         "the process_audio method in the case of some sort of context change.\n")},
     {"set_jsgf_file_search",
      (PyCFunction)PSObj_set_jsgf_file_search, METH_KEYWORDS | METH_VARARGS,
      PS_SEARCH_DOCSTRING(

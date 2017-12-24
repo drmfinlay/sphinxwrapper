@@ -93,6 +93,9 @@ PyObject *
 PSObj_batch_process(PSObj *self, PyObject *list);
 
 PyObject *
+PSObj_end_utterance(PSObj *self);
+
+PyObject *
 PSObj_set_search_internal(PSObj *self, ps_search_type search_type,
                           PyObject *args, PyObject *kwds);
 
