@@ -74,7 +74,7 @@ typedef enum {
 typedef struct {
     PyObject_HEAD
     ps_decoder_t *ps; // pocketsphinx decoder pointer
-    cmd_ln_t * config; // sphinxbase commandline config struct pointer
+    cmd_ln_t *config; // sphinxbase commandline config struct pointer
     PyObject *hypothesis_callback; // callable or None
     PyObject *speech_start_callback; // callable or None
     PyObject *search_name; // string
@@ -127,7 +127,7 @@ PyObject *
 PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
 
 void
-PSObj_dealloc(PSObj* self);
+PSObj_dealloc(PSObj *self);
 
 /* Used to get the ps_decoder_t pointer stored in a PSObj instance,
  * or if it's NULL, return NULL and call PyErr_SetString.

@@ -43,9 +43,9 @@ assert_callable_arg_count(PyObject *value, const unsigned int arg_count) {
 #else
     int count = -1;
     bool result = true;
-    PyObject* fc = PyObject_GetAttrString(value, "func_code");
+    PyObject *fc = PyObject_GetAttrString(value, "func_code");
     if(fc) {
-        PyObject* ac = PyObject_GetAttrString(fc, "co_argcount");
+        PyObject *ac = PyObject_GetAttrString(fc, "co_argcount");
         if(ac) {
             count = PyInt_AsLong(ac);
             Py_DECREF(ac);

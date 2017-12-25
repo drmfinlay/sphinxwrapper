@@ -66,7 +66,7 @@ PyTypeObject AudioDataType;
 PyObject *AudioDataError;
 
 void
-AudioDataObj_dealloc(AudioDataObj* self);
+AudioDataObj_dealloc(AudioDataObj *self);
 
 PyObject *
 AudioDataObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
@@ -98,7 +98,7 @@ PyObject *
 AudioDeviceObj_read_audio(AudioDeviceObj *self);
 
 void
-AudioDeviceObj_dealloc(AudioDeviceObj* self);
+AudioDeviceObj_dealloc(AudioDeviceObj *self);
 
 PyObject *
 AudioDeviceObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds);

@@ -60,7 +60,7 @@ const arg_t cont_args_def[] = {
 PyObject *
 PSObj_process_audio_internal(PSObj *self, PyObject *audio_data,
                              bool call_callbacks) {
-    ps_decoder_t * ps = get_ps_decoder_t(self);
+    ps_decoder_t *ps = get_ps_decoder_t(self);
 
     if (ps == NULL)
         return NULL;
@@ -197,7 +197,7 @@ PSObj_batch_process(PSObj *self, PyObject *args, PyObject *kwds) {
 
 PyObject *
 PSObj_end_utterance(PSObj *self) {
-    ps_decoder_t * ps = get_ps_decoder_t(self);
+    ps_decoder_t *ps = get_ps_decoder_t(self);
     if (ps == NULL)
         return NULL;
 
@@ -234,7 +234,7 @@ PSObj_set_search_internal(PSObj *self, ps_search_type search_type,
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|s", kwlist, &value, &name))
         return NULL;
     
-    ps_decoder_t * ps = get_ps_decoder_t(self);
+    ps_decoder_t *ps = get_ps_decoder_t(self);
     if (ps == NULL)
         return NULL;
 
@@ -577,7 +577,7 @@ PSObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 }
 
 void
-PSObj_dealloc(PSObj* self) {
+PSObj_dealloc(PSObj *self) {
     Py_XDECREF(self->hypothesis_callback);
     Py_XDECREF(self->speech_start_callback);
     Py_XDECREF(self->search_name);
@@ -637,7 +637,7 @@ PSObj_init(PSObj *self, PyObject *args, PyObject *kwds) {
         list_size = PyList_Size(ps_args);
         char *strings[list_size];
         for (Py_ssize_t i = 0; i < list_size; i++) {
-            PyObject * item = PyList_GetItem(ps_args, i);
+            PyObject *item = PyList_GetItem(ps_args, i);
             char *err_msg = "all list items must be strings!";
 #if PY_MAJOR_VERSION >= 3
             if (!PyUnicode_Check(item)) {
@@ -689,8 +689,8 @@ PSObj_get_hypothesis_callback(PSObj *self, void *closure) {
 
 PyObject *
 PSObj_get_in_speech(PSObj *self, void *closure) {
-    PyObject * result = NULL;
-    ps_decoder_t * ps = get_ps_decoder_t(self);
+    PyObject *result = NULL;
+    ps_decoder_t *ps = get_ps_decoder_t(self);
     if (ps != NULL) {
         uint8 in_speech = ps_get_in_speech(ps);
         if (in_speech)
@@ -768,12 +768,12 @@ PSObj_set_active_search(PSObj *self, PyObject *value, void *closure) {
         return -1;
     }
 
-    ps_decoder_t * ps = get_ps_decoder_t(self);
+    ps_decoder_t *ps = get_ps_decoder_t(self);
     if (ps == NULL)
         return -1;
 
-    const char* new_search_name;
-    const char* err_msg = "value must be a string.";
+    const char *new_search_name;
+    const char *err_msg = "value must be a string.";
 
 #if PY_MAJOR_VERSION >= 3
     if (!PyUnicode_Check(value)) {

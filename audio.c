@@ -43,7 +43,7 @@
 #include "audio.h"
 
 void
-AudioDataObj_dealloc(AudioDataObj* self) {
+AudioDataObj_dealloc(AudioDataObj *self) {
     // Free the Python type object
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -270,7 +270,7 @@ AudioDeviceObj_read_audio(AudioDeviceObj *self) {
 }
 
 void
-AudioDeviceObj_dealloc(AudioDeviceObj* self) {
+AudioDeviceObj_dealloc(AudioDeviceObj *self) {
     // Close the audio device if it's open
     // and stop recording
     ad_rec_t *ad = self->ad;
@@ -307,7 +307,7 @@ AudioDeviceObj_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
 int
 AudioDeviceObj_init(AudioDeviceObj *self, PyObject *args, PyObject *kwds) {
-    char* name = NULL;
+    char *name = NULL;
     static char *kwlist[] = {"name", NULL};
 
     // Accept one optional argument
