@@ -141,13 +141,29 @@ PSObj_process_audio(PSObj *self, PyObject *audio_data) {
 }
 
 PyObject *
-PSObj_batch_process(PSObj *self, PyObject *list) {
-    if (list == NULL || !PyList_Check(list)) {
-        PyErr_SetString(PyExc_TypeError, "argument must be a list");
+PSObj_batch_process(PSObj *self, PyObject *args, PyObject *kwds) {
+    static char *kwlist[] = {"audio", "use_callbacks", NULL};
+    PyObject *audio = NULL;
+
+    // True by default. No need to increment this because it's only used internally.
+    PyObject *use_callbacks = Py_True;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O", kwlist, &audio,
+                                     &use_callbacks))
+        return NULL;
+
+    if (!PyBool_Check(use_callbacks)) {
+        PyErr_SetString(PyExc_TypeError, "'use_callbacks' parameter must be a "
+                        "boolean value.");
         return NULL;
     }
 
-    Py_ssize_t list_size = PyList_Size(list);
+    if (audio == NULL || !PyList_Check(audio)) {
+        PyErr_SetString(PyExc_TypeError, "'audio' parameter must be a list");
+        return NULL;
+    }
+
+    Py_ssize_t list_size = PyList_Size(audio);
     PyObject *result;
     if (list_size == 0) {
         Py_INCREF(Py_None);
@@ -155,16 +171,25 @@ PSObj_batch_process(PSObj *self, PyObject *list) {
     }
 
     for (Py_ssize_t i = 0; i < list_size; i++) {
-        PyObject * item = PyList_GetItem(list, i);
+        PyObject *item = PyList_GetItem(audio, i);
         if (!PyObject_TypeCheck(item, &AudioDataType)) {
-            PyErr_SetString(PyExc_TypeError, "all list items must be AudioData objects!");
+            PyErr_SetString(PyExc_TypeError, "all list items must be AudioData "
+                            "objects!");
             return NULL;
         }
-        result = PSObj_process_audio_internal(self, item, false);
+
+        result = PSObj_process_audio_internal(
+            self, item, use_callbacks == Py_True ? true : false);
 
         // Break on errors so NULL is returned
         if (result == NULL)
             break;
+
+        // Discard the result object if callbacks are being used
+        if (use_callbacks == Py_True) {
+            Py_DECREF(result);
+            result = Py_None;
+        }
     }
 
     return result;
@@ -463,11 +488,14 @@ PyMethodDef PSObj_methods[] = {
          "Process audio from an AudioData object and call the speech_start and "
          "hypothesis callbacks where necessary.\n")},
     {"batch_process",
-     (PyCFunction)PSObj_batch_process, METH_O,  // takes self + one argument
+     (PyCFunction)PSObj_batch_process, METH_KEYWORDS | METH_VARARGS,
      PyDoc_STR(
-         "Process a list of AudioData objects and return a speech hypothesis or "
-         "None.\n"
-         "This method doesn't call speech_start or hypothesis callbacks.\n")},
+         "Process a list of AudioData objects and return the speech hypothesis or "
+         "use the decoder callbacks if use_callbacks is True.\n\n"
+         "Keyword arguments:\n"
+         "audio -- list of AudioData objects to process.\n"
+         "use_callbacks -- whether to use the decoder callbacks or return the "
+         "speech hypothesis (default True)\n")},
     {"end_utterance",
      (PyCFunction)PSObj_end_utterance, METH_NOARGS,  // takes no arguments
      PyDoc_STR(

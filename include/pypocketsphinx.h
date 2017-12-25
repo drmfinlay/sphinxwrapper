@@ -90,7 +90,7 @@ PyObject *
 PSObj_process_audio(PSObj *self, PyObject *audio_data);
 
 PyObject *
-PSObj_batch_process(PSObj *self, PyObject *list);
+PSObj_batch_process(PSObj *self, PyObject *args, PyObject *kwds);
 
 PyObject *
 PSObj_end_utterance(PSObj *self);
