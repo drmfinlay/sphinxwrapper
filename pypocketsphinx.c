@@ -535,7 +535,7 @@ PyMethodDef PSObj_methods[] = {
     {"set_config_argument",
      (PyCFunction)PSObj_set_config_argument, METH_KEYWORDS | METH_VARARGS,
      PyDoc_STR(
-         "Set a Sphinx decoder configuration argument.\n"
+         "Set a Sphinx decoder configuration argument.\n\n"
          "Keyword arguments:\n"
          "name -- the name of the configuration argument to set.\n"
          "value -- the new value for the configuration argument.\n"
@@ -544,7 +544,7 @@ PyMethodDef PSObj_methods[] = {
     {"get_config_argument",
      (PyCFunction)PSObj_get_config_argument, METH_KEYWORDS | METH_VARARGS,
      PyDoc_STR(
-         "Get the value of a Sphinx decoder configuration argument.\n"
+         "Get the value of a Sphinx decoder configuration argument.\n\n"
          "Keyword arguments:\n"
          "name -- the name of the configuration argument to get.\n")},
     {NULL}  /* Sentinel */
