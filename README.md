@@ -5,7 +5,7 @@ This is an simplified alternative to the SWIG Python modules for
 [CMU Pocket Sphinx](https://github.com/cmusphinx/pocketsphinx) and 
 [Sphinx base](https://github.com/cmusphinx/sphinxbase). You can read more about the CMU Sphinx speech recognition projects [here](https://cmusphinx.github.io/wiki/).
 
-`sphinxwrapper` doesn't have all of the functionality that the offical SWIG Python modules do, but the [examples](examples/) show what it does have. Although most of the `PocketSphinx` type methods are used, some haven't been put into the examples yet.
+This extension doesn't have all of the functionality that the offical SWIG Python modules do, but the [examples](examples/) show what it does have. Although most of the `PocketSphinx` type methods are used, some haven't been put into the examples yet. There is documentation available through the Python `help` function. I'm 
 
 ## Installing dependencies
 This project has the following library dependencies:
@@ -20,7 +20,7 @@ Install the CMU Sphinx dependencies on Debian using the following:
 sudo apt install libpocketsphinx-dev libpocketsphinx3 libsphinxbase-dev libsphinxbase3 pocketsphinx pocketsphinx-en-us
 ```
 
-Note: `pocketsphinx-en-us` contains both models (LM and HMM) and the pronunciation dictionary for US English. Other models and dictionaries are available [from sourceforge](https://sourceforge.net/projects/cmusphinx/files/Acoustic%20and%20Language%20Models/). You can also build your own language model. There is information on that [here](https://cmusphinx.github.io/wiki/tutoriallm/#language-models), although it is rather involved.
+**Note**: `pocketsphinx-en-us` contains both models (LM and HMM) and the pronunciation dictionary for US English. Other models and dictionaries are available [from sourceforge](https://sourceforge.net/projects/cmusphinx/files/Acoustic%20and%20Language%20Models/). You can also build your own language model. There is information on that [here](https://cmusphinx.github.io/wiki/tutoriallm/#language-models), although it is rather involved.
 
 You'll also need to install the dev package for the version of Python you want to use.
 
@@ -31,6 +31,21 @@ sudo apt install python3-dev
 
 ### Compiling dependencies from source
 If the dependencies aren't available from your system's package management system, you can download and compile the sources from the repositories linked above and follow the instructions there. 
+
+**Note**: both dependencies by default require *swig*, but you shouldn't need to install it at all because the swig modules for the dependencies are not used. You can use `./autogen.sh --without-python` to configure both dependencies to compile without swig.
+
+#### Windows
+If you want to use this on Windows, I'd recommend installing [Cygwin](https://cygwin.com/) and compiling everything using that. I don't usually use Windows, but as I understand it you'd have to do something like this:
+
+1. Download Cygwin.
+2. Start the installer and select the dependencies of *sphinxbase* and *pocketsphinx* when it asks for packages you want installed. As a start you need *autoconf*, *automake*, *libtool*, and *bison*. As noted above, you shouldn't need to install *swig* at all.
+3. Select *python2* and *python2-devel* (or *python3* and *python3-devel*) at that stage too.
+4. Open Cygwin.
+5. Clone or download the *sphinxbase* and *pocketsphinx* repositories into your home folder in Cygwin (usually somewhere under *C:\tools\cygwin*).
+6. Compile *sphinxbase* using `./autogen.sh --without-python` in the sphinxbase folder, followed by `make install`.
+7. Compile *pocketsphinx* using the same commands in the pocketsphinx folder.
+
+Once you've done all that you should be able to compile, install and use `sphinxwrapper` as normal inside cygwin. Let me know if these steps work for you or not; I haven't tested them.
 
 ## Install the sphinxwrapper Python Extension
 Clone or download this repository and run the following:
@@ -71,4 +86,4 @@ while True:
 This extension module has been written for Python 2.7 and above. For the most part, it should work exactly the same way for all supported versions. If you come across any problems that are specific to the Python version you're using, please file an issue.
 
 ### Future CMU Sphinx API changes
-There will probably be changes to CMU Sphinx libraries such as Pocket Sphinx and sphinxbase that break this module in the future in some way. I'm happy to fix any such issues. Just file an issue.
+There will probably be changes to CMU Sphinx libraries such as Pocket Sphinx and sphinxbase that break this module in the future in some way. I'm happy to fix any such issues, just file an issue.
