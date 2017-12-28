@@ -5,7 +5,7 @@ This is an simplified alternative to the SWIG Python modules for
 [CMU Pocket Sphinx](https://github.com/cmusphinx/pocketsphinx) and 
 [Sphinx base](https://github.com/cmusphinx/sphinxbase). You can read more about the CMU Sphinx speech recognition projects [here](https://cmusphinx.github.io/wiki/).
 
-This extension doesn't have all of the functionality that the offical SWIG Python modules do, but the [examples](examples/) show what it does have. Although most of the `PocketSphinx` type methods are used, some haven't been put into the examples yet. There is documentation available through the Python `help` function. I'm 
+This extension doesn't have all of the functionality that the offical SWIG Python modules do, but the [examples](examples/) show what it does have. Although most of the `PocketSphinx` type methods are used, some haven't been put into the examples yet.
 
 ## Installing dependencies
 This project has the following library dependencies:
