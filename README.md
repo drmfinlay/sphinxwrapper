@@ -35,7 +35,7 @@ If the dependencies aren't available from your system's package management syste
 **Note**: both dependencies by default require *swig*, but you shouldn't need to install it at all because the swig modules for the dependencies are not used. You can use `./autogen.sh --without-python` to configure both dependencies to compile without swig.
 
 #### Windows
-Compiling CMU Sphinx libraries on Windows is a little different. There are specific instructions for Pocket Sphinx (here)[https://github.com/cmusphinx/pocketsphinx#ms-windows-ms-visual-studio-2010-or-newer---we-test-with-vc-2010-express] and Sphinx base (here)[https://github.com/cmusphinx/sphinxbase#ms-windows-installation].
+Compiling CMU Sphinx libraries on Windows is a little different. There are specific instructions for Pocket Sphinx [here](https://github.com/cmusphinx/pocketsphinx#ms-windows-ms-visual-studio-2010-or-newer---we-test-with-vc-2010-express) and Sphinx base [here](https://github.com/cmusphinx/sphinxbase#ms-windows-installation).
 
 If you want to use Cygwin, the audio implementation currently doesn't work, so you won't be able to build *sphinxwrapper* without modifications to *sphinxbase*.
 
