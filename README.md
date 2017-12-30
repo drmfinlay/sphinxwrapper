@@ -35,17 +35,9 @@ If the dependencies aren't available from your system's package management syste
 **Note**: both dependencies by default require *swig*, but you shouldn't need to install it at all because the swig modules for the dependencies are not used. You can use `./autogen.sh --without-python` to configure both dependencies to compile without swig.
 
 #### Windows
-If you want to use this on Windows, I'd recommend installing [Cygwin](https://cygwin.com/) and compiling everything using that. I don't usually use Windows, but as I understand it you'd have to do something like this:
+Compiling CMU Sphinx libraries on Windows is a little different. There are specific instructions for Pocket Sphinx (here)[https://github.com/cmusphinx/pocketsphinx#ms-windows-ms-visual-studio-2010-or-newer---we-test-with-vc-2010-express] and Sphinx base (here)[https://github.com/cmusphinx/sphinxbase#ms-windows-installation].
 
-1. Download Cygwin.
-2. Start the installer and select the dependencies of *sphinxbase* and *pocketsphinx* when it asks for packages you want installed. As a start you need *autoconf*, *automake*, *libtool*, and *bison*. As noted above, you shouldn't need to install *swig* at all.
-3. Select *python2* and *python2-devel* (or *python3* and *python3-devel*) at that stage too.
-4. Open Cygwin.
-5. Clone or download the *sphinxbase* and *pocketsphinx* repositories into your home folder in Cygwin (usually somewhere under *C:\tools\cygwin*).
-6. Compile *sphinxbase* using `./autogen.sh --without-python` in the sphinxbase folder, followed by `make install`.
-7. Compile *pocketsphinx* using the same commands in the pocketsphinx folder.
-
-Once you've done all that you should be able to compile, install and use `sphinxwrapper` as normal inside cygwin. Let me know if these steps work for you or not; I haven't tested them.
+If you want to use Cygwin, the audio implementation currently doesn't work, so you won't be able to build *sphinxwrapper* without modifications to *sphinxbase*.
 
 ## Install the sphinxwrapper Python Extension
 Clone or download this repository and run the following:
