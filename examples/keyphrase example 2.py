@@ -1,3 +1,5 @@
+from pyaudio import PyAudio, paInt16
+
 from sphinxwrapper import *
 import time
 
@@ -8,13 +10,15 @@ def main():
     
     # Set up a keyphrase search with the name 'keyphrase'
     # The keyphrase can contain any word in the active dictionary
-    keyphrase = "oh mighty computer"
-    ps.set_keyphrase_search(keyphrase, "keyphrase")
+    keyphrase = "computer"
+    ps.set_keyphrase("keyphrase", keyphrase)
+    ps.active_search = "keyphrase"
 
     def speech_start_callback():
         print("Speech started.")
         
-    def hyp_callback(s):
+    def hyp_callback(hyp):
+        s = hyp.hypstr if hyp else None
         if s == keyphrase:
             print("Keyphrase spoken.")
 
@@ -31,11 +35,12 @@ def main():
     ps.hypothesis_callback = hyp_callback
     
     # Recognise from the mic in a loop
-    ad = AudioDevice()
-    ad.open()
-    ad.record()
+    p = PyAudio()
+    stream = p.open(format=paInt16, channels=1, rate=16000, input=True,
+                    output=True, frames_per_buffer=2048)
+    stream.start_stream()
     while True:
-        ps.process_audio(ad.read_audio())
+        ps.process_audio(stream.read(2048))
         time.sleep(0.1)
 
 if __name__ == "__main__":

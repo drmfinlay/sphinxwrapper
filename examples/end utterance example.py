@@ -12,35 +12,47 @@ There are other use cases for this method. For example, if a user is speaking a
 command in the context of a focused window on a desktop system and changes to a
 different window, then perhaps the command is now invalid in that context and the
 utterance should be ended, preventing the hypothesis callback from being reached.
-
-Note: the Pocket Sphinx INFO output for this example is a bit spammy because there
-are two decoders, so it's a bit difficult to see what's going on.
 """
 
 
 from sphinxwrapper import *
+from pyaudio import PyAudio, paInt16
 import time
 
 
 def main():
     # Set up a decoder with a default LM search
-    ps1 = PocketSphinx()
+    cfg = DefaultConfig()
 
-    # And one with a keyphrase search
-    ps2 = PocketSphinx(["-keyphrase", "alexa"])
+    # Also discard Pocket Sphinx's log output because otherwise it's a bit difficult
+    # to see what's going on with two decoders running
+    # Note: I don't think /dev/null will work on Windows
+    cfg.set_string("-logfn", "/dev/null")
+    ps1 = PocketSphinx(cfg)
+
+    # Set up another decoder with a keyphrase search
+    cfg = DefaultConfig()
+    cfg.set_string("-keyphrase", "alexa")
+    cfg.set_string("-logfn", "/dev/null")
+    ps2 = PocketSphinx(cfg)
 
     # Define some callbacks for the decoders
     def speech_start_callback():
         print("Speech started.")
 
-    def hyp_callback_1(s):
-        # Put some newlines in to make this more visible in the output
-        print("\n\nHypothesis: %s\n\n" % s)
+    def hyp_callback_1(hyp):
+        if not hyp:
+            return
+        print("Hypothesis: %s" % hyp.hypstr)
 
-    def hyp_callback_2(s):
+    def hyp_callback_2(hyp):
+        if not hyp:
+            print("Keyphrase not heard, continuing.")
+            return
+        s = hyp.hypstr
         if s == "alexa":
-            print("\n\nKeyphrase heard. Ending utterance for decoder 1.\n\n")
-            ps1.end_utterance()
+            print("Keyphrase heard. Ending utterance for decoder 1.")
+            ps1.end_utterance()  # this is a guarded method.
 
     # Set decoder callbacks
     ps1.speech_start_callback = speech_start_callback
@@ -49,17 +61,21 @@ def main():
     ps2.hypothesis_callback = hyp_callback_2
 
     # Recognise from the mic in a loop
-    ad = AudioDevice()
-    ad.open()
-    ad.record()
-    while True:
-        audio = ad.read_audio()
+    p = PyAudio()
+    stream = p.open(format=paInt16, channels=1, rate=16000, input=True,
+                    output=True, frames_per_buffer=2048)
+    stream.start_stream()
+    try:
+        while True:
+            audio = stream.read(2048)
 
-        # Process audio with both decoders
-        # ps2 processes the audio first because it can end the utterance for ps1
-        ps2.process_audio(audio)
-        ps1.process_audio(audio)
-        time.sleep(0.1)
+            # Process audio with both decoders
+            # ps2 processes the audio first because it can end the utterance for ps1
+            ps2.process_audio(audio)
+            ps1.process_audio(audio)
+            time.sleep(0.1)
+    except KeyboardInterrupt:
+        stream.close()
 
 
 if __name__ == "__main__":

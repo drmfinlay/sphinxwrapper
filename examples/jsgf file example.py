@@ -1,3 +1,5 @@
+from pyaudio import PyAudio, paInt16
+
 from sphinxwrapper import *
 import time
 
@@ -6,24 +8,26 @@ def speech_start_callback():
     print("Speech started.")
 
 
-def hyp_callback(s):
+def hyp_callback(hyp):
+    s = hyp.hypstr if hyp else None
     print("Hypothesis: %s" % s)
 
 
 def main():
+    # Set up the decoder with a JSGF grammar loaded from a file
+    cfg = DefaultConfig()
+    cfg.set_string("-jsgf", "grammar.jsgf")
     ps = PocketSphinx()
     ps.speech_start_callback = speech_start_callback
     ps.hypothesis_callback = hyp_callback
-
-    # Set up the decoder with a JSGF grammar loaded from a file
-    ps.set_jsgf_file_search("grammar.jsgf")
     
     # Recognise from the mic in a loop
-    ad = AudioDevice()
-    ad.open()
-    ad.record()
+    p = PyAudio()
+    stream = p.open(format=paInt16, channels=1, rate=16000, input=True,
+                    output=True, frames_per_buffer=2048)
+    stream.start_stream()
     while True:
-        ps.process_audio(ad.read_audio())
+        ps.process_audio(stream.read(2048))
         time.sleep(0.1)
 
 if __name__ == "__main__":
