@@ -72,7 +72,7 @@ This package has been written for Python 2.7 and above. For the most part, it sh
 There might be changes to CMU Sphinx libraries in the future that break this package in some way. I'm happy to fix any such issues, just file an issue.
 
 ### Python C Extension module
-This project used to be in the form of a Python C extension module. That version of `sphinxwrapper` still exists in another branch of this project [here](Danesprite/sphinxwrapper/tree/c-extension) along with its examples, setup file, README, etc.
+This project used to be in the form of a Python C extension module. That version of `sphinxwrapper` still exists in another branch of this project [here](https://github.com/Danesprite/sphinxwrapper/tree/c-extension) along with its examples, setup file, README, etc.
 
 At the time of writing, the simplistic Python audio API that the extension module uses is not available from the *sphinxbase* Python Swig modules - I used the *sphinxbase* C audio API directly. I guess this is the only reason to use the C extension version, in the case that `pyaudio` doesn't work for you.
 
