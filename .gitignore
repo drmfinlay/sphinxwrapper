@@ -4,3 +4,6 @@
 *.o
 .fuse*
 .idea/
+build/
+dist/
+*.egg-info/
