@@ -21,7 +21,7 @@ def main():
     # Recognise from the mic in a loop
     p = PyAudio()
     stream = p.open(format=paInt16, channels=1, rate=16000, input=True,
-                    output=True, frames_per_buffer=2048)
+                    frames_per_buffer=2048)
     stream.start_stream()
     while True:
         ps.process_audio(stream.read(2048))
