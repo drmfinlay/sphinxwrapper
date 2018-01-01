@@ -17,7 +17,7 @@ def main():
     # Set up the decoder with a JSGF grammar loaded from a file
     cfg = DefaultConfig()
     cfg.set_string("-jsgf", "grammar.jsgf")
-    ps = PocketSphinx()
+    ps = PocketSphinx(cfg)
     ps.speech_start_callback = speech_start_callback
     ps.hypothesis_callback = hyp_callback
     
