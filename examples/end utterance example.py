@@ -17,7 +17,7 @@ utterance should be ended, preventing the hypothesis callback from being reached
 
 from sphinxwrapper import *
 from pyaudio import PyAudio, paInt16
-import time
+import time, os
 
 
 def main():
@@ -25,15 +25,15 @@ def main():
     cfg = DefaultConfig()
 
     # Also discard Pocket Sphinx's log output because otherwise it's a bit difficult
-    # to see what's going on with two decoders running
-    # Note: I don't think /dev/null will work on Windows
-    cfg.set_string("-logfn", "/dev/null")
+    # to see what's going on with two decoders running. Do this using the portable
+    # os.devnull path
+    cfg.set_string("-logfn", os.devnull)
     ps1 = PocketSphinx(cfg)
 
     # Set up another decoder with a keyphrase search
     cfg = DefaultConfig()
     cfg.set_string("-keyphrase", "alexa")
-    cfg.set_string("-logfn", "/dev/null")
+    cfg.set_string("-logfn", os.devnull)
     ps2 = PocketSphinx(cfg)
 
     # Define some callbacks for the decoders
