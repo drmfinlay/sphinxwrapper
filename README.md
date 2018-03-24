@@ -35,6 +35,8 @@ Clone or download this repository and run the following:
 python setup.py install
 ```
 
+The *localise* extra for `sphinxwrapper` requires the Python packages for GNU aspell. You can install the extra using pip: `pip install sphinxwrapper[localise]`.
+
 ## Usage example
 The following is a simple usage example showing how to use the `sphinxwrapper` package to make Pocket Sphinx continuously recognise using the default configuration from the default microphone using `pyaudio`.
 ``` Python
