@@ -54,25 +54,27 @@ class PocketSphinx(Decoder):
         Process audio from an audio buffer using the decoder's process_raw method and
         call the speech start and hypothesis callbacks if and when necessary.
         """
-        if self._utterance_state == self._UTT_ENDED:
+        if self.utt_ended:
             self.start_utt()
-            self._utterance_state = self._UTT_IDLE
 
         self.process_raw(buf, no_search, full_utterance)
+
+        # Note that get_in_speech moves idle -> started if returning True, so check
+        # utt_idle before calling that method.
+        was_idle = self.utt_idle
+
+        # Check if we're in speech.
         in_speech = self.get_in_speech()
 
-        if in_speech and self._utterance_state == self._UTT_IDLE:
-            # Utterance has now started
-            self._utterance_state = self._UTT_STARTED
-
+        # In speech and idle -> started transition just occurred.
+        if in_speech and was_idle and self.utt_started:
             # Call speech start callback if it is set
             if use_callbacks and self.speech_start_callback:
                 self.speech_start_callback()
 
-        elif not in_speech and self._utterance_state == self._UTT_STARTED:
+        elif not in_speech and self.utt_started:
             # We're not in speech any more; utterance is over.
             self.end_utt()
-            self._utterance_state = self._UTT_ENDED
             hyp = self.hyp()
 
             # Call the hypothesis callback if using callbacks and if it is set
@@ -99,16 +101,75 @@ class PocketSphinx(Decoder):
 
         return result
 
-    def end_utterance(self):
+    def get_in_speech(self):
+        """
+        Check if the last audio buffer contained speech.
+        This method will also move utterance state from idle to started.
+        :rtype: bool
+        """
+        in_speech = super(PocketSphinx, self).get_in_speech()
+
+        # Move idle -> started to make utterance properties compatible with using
+        # methods like process_raw instead of process_audio.
+        if in_speech and self.utt_idle:
+            # Utterance has now started
+            self._utterance_state = self._UTT_STARTED
+
+        return in_speech
+
+    def start_utt(self):
+        """
+        Starts a new utterance if one is not already in progress.
+        This method will *not* raise an error if an utterance is in progress
+        (started or idle) already.
+        """
+        if self.utt_ended:
+            super(PocketSphinx, self).start_utt()
+            self._utterance_state = self._UTT_IDLE
+
+    @property
+    def utt_idle(self):
+        """
+        Whether an utterance is in progress, but no speech has been detected yet.
+        get_in_speech() would return False for this case.
+        :rtype: bool
+        """
+        return self._utterance_state == self._UTT_IDLE
+
+    @property
+    def utt_started(self):
+        """
+        Whether an utterance is in progress and speech has been detected.
+        get_in_speech() would return True for this case.
+        :rtype: bool
+        """
+        return self._utterance_state == self._UTT_STARTED
+
+    def end_utt(self):
         """
         Ends the current utterance if one was in progress.
         This method is useful for resetting processing of audio via the
         process_audio method. It will *not* raise an error if no utterance was in
         progress.
         """
-        if self._utterance_state != self._UTT_ENDED:
-            self.end_utt()
+        if not self.utt_ended:
+            super(PocketSphinx, self).end_utt()
             self._utterance_state = self._UTT_ENDED
+
+    @property
+    def utt_ended(self):
+        """
+        Whether there is no utterance in progress.
+        :rtype: bool
+        """
+        return self._utterance_state == self._UTT_ENDED
+
+    # Alias utterance methods and properties
+    end_utterance = end_utt
+    start_utterance = start_utt
+    utterance_started = utt_started
+    utterance_idle = utt_idle
+    utterance_ended = utt_ended
 
     @property
     def active_search(self):
