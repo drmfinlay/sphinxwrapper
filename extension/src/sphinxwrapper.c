@@ -33,7 +33,7 @@
 #include "audio.h"
 #include "pypocketsphinx.h"
 
-#if PY_MAJOR_VERSION >= 3
+#ifdef IS_PY3
 struct module_state {};
 #define GETSTATE(m) ((struct module_state*)PyModule_GetState(m))
 #else
@@ -43,7 +43,7 @@ static PyMethodDef sphinxwrapper_methods[] = {
     {NULL, NULL, 0, NULL} // Sentinel signifying the end of definitions
 };
 
-#if PY_MAJOR_VERSION >= 3
+#ifdef IS_PY3
 #define INIT_SPHINX_WRAPPER PyInit_sphinxwrapper
 
 // Python 3 extensions define modules similar to the way custom types are defined
@@ -65,7 +65,7 @@ static struct PyModuleDef moduledef = {
 
 PyMODINIT_FUNC
 INIT_SPHINX_WRAPPER(void) {
-#if PY_MAJOR_VERSION >= 3
+#ifdef IS_PY3
     PyObject *module = PyModule_Create(&moduledef);
 #else
     PyObject *module = Py_InitModule("sphinxwrapper", sphinxwrapper_methods);
@@ -73,20 +73,20 @@ INIT_SPHINX_WRAPPER(void) {
     // Set up the 'PocketSphinx' type and anything else it needs
     // Return appropriately for the Python version if there's an error
     if (initpocketsphinx(module) == NULL)
-        INITERROR;
+        PYCOMPAT_INIT_ERROR;
 
     // Set up the audio related types
     if (initaudio(module) == NULL)
-        INITERROR;
+        PYCOMPAT_INIT_ERROR;
 
-#if PY_MAJOR_VERSION >= 3
+#ifdef IS_PY3
     return module;
 #endif
 }
 
 int
 main(int argc, char *argv[]) {
-#if PY_MAJOR_VERSION >= 3
+#ifdef IS_PY3
     /* Pass argv[0] to the Python interpreter */
     wchar_t *program = Py_DecodeLocale(argv[0], NULL);
     if (program == NULL) {

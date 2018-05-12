@@ -1,7 +1,10 @@
 /*
- * pyutil.c
+ * PythonCompat.h
  *
- *  Created on 22 Sept. 2017
+ * Header with definitions for writing C/C++ extension modules compatible with
+ * Python 2.x and Python 3.x.
+ *
+ *  Created on 12 May. 2018
  *      Author: Dane Finlay
  *
  * ==============================================================================
@@ -29,41 +32,50 @@
  * ==============================================================================
  */
 
-#include "pyutil.h"
+#ifndef PYTHONCOMPAT_H_
+#define PYTHONCOMPAT_H_
 
-bool
-assert_callable_arg_count(PyObject *value, const unsigned int arg_count) {
-#ifdef IS_PY3
-    // This doesn't work in Python 3+. See header.
-    PyErr_Format(PyExc_NotImplementedError,
-                 "internal C function '%s' is not yet "
-                 "implemented for this version of Python.",
-                 __func__);
-    return false;
+#include <Python.h>
+
+#if PY_MAJOR_VERSION >= 3
+#define IS_PY3
 #else
-    int count = -1;
-    bool result = true;
-    PyObject *fc = PyObject_GetAttrString(value, "func_code");
-    if(fc) {
-        PyObject *ac = PyObject_GetAttrString(fc, "co_argcount");
-        if(ac) {
-            count = PyInt_AsLong(ac);
-            Py_DECREF(ac);
-        }
-        Py_DECREF(fc);
-    }
-
-    const char *arg_or_args;
-    if (arg_count == 1) arg_or_args = "argument";
-    else arg_or_args = "arguments";
-
-    if (count != arg_count) {
-        PyErr_Format(PyExc_TypeError, "callable must have %d %s, found %d %s",
-                     arg_count, arg_or_args, count, arg_or_args);
-        result = false;
-    }
-    
-    return result;
+#define IS_PY2
 #endif
-}
 
+// Definitions for Python 2.x
+#ifdef IS_PY2
+
+// Checks
+#define PYCOMPAT_STRING_CHECK PyString_Check
+#define PYCOMPAT_INT_CHECK PyInt_Check
+
+// Conversions
+#define PYCOMPAT_STRING_AS_STRING PyString_AsString
+#define PYCOMPAT_INT_AS_LONG PyInt_AsLong
+
+// Modules
+#define PYCOMPAT_INIT_ERROR return
+
+// Definitons for Python 3.x and above
+#else
+
+// Checks
+#define PYCOMPAT_STRING_CHECK PyUnicode_Check
+#define PYCOMPAT_INT_CHECK PyLong_Check
+
+// Conversions
+#define PYCOMPAT_STRING_AS_STRING PyUnicode_AsUTF8
+#define PYCOMPAT_INT_AS_LONG PyLong_AsLong
+
+// Modules
+#define PYCOMPAT_INIT_ERROR return NULL
+#endif
+
+// Define the return type of module init functions if necessary
+#ifndef PyMODINIT_FUNC /* declarations for DLL import/export */
+#define PyMODINIT_FUNC void
+#endif
+
+
+#endif /* PYTHONCOMPAT_H_ */

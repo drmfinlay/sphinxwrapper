@@ -46,7 +46,6 @@
 
 #include <stdio.h>
 #include <stdbool.h>
-#include <Python.h>
 #include <pocketsphinx.h>
 #include <sphinxbase/cmd_ln.h>
 #include <sphinxbase/err.h>

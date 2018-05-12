@@ -639,21 +639,12 @@ PSObj_init(PSObj *self, PyObject *args, PyObject *kwds) {
         for (Py_ssize_t i = 0; i < list_size; i++) {
             PyObject *item = PyList_GetItem(ps_args, i);
             char *err_msg = "all list items must be strings!";
-#if PY_MAJOR_VERSION >= 3
-            if (!PyUnicode_Check(item)) {
+            if (!PYCOMPAT_STRING_CHECK(item)) {
                 PyErr_SetString(PyExc_TypeError, err_msg);
                 return -1;
             }
 
-            strings[i] = PyUnicode_AsUTF8(item);
-#else
-            if (!PyString_Check(item)) {
-                PyErr_SetString(PyExc_TypeError, err_msg);
-                return -1;
-            }
-		
-            strings[i] = PyString_AsString(item);
-#endif
+            strings[i] = PYCOMPAT_STRING_AS_STRING(item);
         }
 
         // Init a new pocket sphinx decoder or raise a PocketSphinxError and return -1
@@ -723,7 +714,7 @@ PSObj_set_speech_start_callback(PSObj *self, PyObject *value, void *closure) {
         return -1;
     }
 
-#if PY_MAJOR_VERSION == 2
+#ifdef IS_PY2
     if (!assert_callable_arg_count(value, 0))
         return -1;
 #endif
@@ -748,7 +739,7 @@ PSObj_set_hypothesis_callback(PSObj *self, PyObject *value, void *closure) {
         return -1;
     }
 
-#if PY_MAJOR_VERSION == 2
+#ifdef IS_PY2
     if (!assert_callable_arg_count(value, 1))
         return -1;
 #endif
@@ -775,21 +766,12 @@ PSObj_set_active_search(PSObj *self, PyObject *value, void *closure) {
     const char *new_search_name;
     const char *err_msg = "value must be a string.";
 
-#if PY_MAJOR_VERSION >= 3
-    if (!PyUnicode_Check(value)) {
+    if (!PYCOMPAT_STRING_CHECK(value)) {
         PyErr_SetString(PyExc_TypeError, err_msg);
         return -1;
     }
 
-    new_search_name = PyUnicode_AsUTF8(value);
-#else
-    if (!PyString_Check(value)) {
-        PyErr_SetString(PyExc_TypeError, err_msg);
-        return -1;
-    }
-
-    new_search_name = PyString_AsString(value);
-#endif
+    new_search_name = PYCOMPAT_STRING_AS_STRING(value);
 
     // Set the search and raise an error if something goes wrong
     if (ps_set_search(ps, new_search_name) < 0) {

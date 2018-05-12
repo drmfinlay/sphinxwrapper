@@ -131,16 +131,10 @@ AudioDeviceObj_open(AudioDeviceObj *self) {
     const char *dev = NULL;
 
     // Get a C representation of the audio device name from self->name
-    // This is operation is different in Python 2.7 and 3+
-#if PY_MAJOR_VERSION >= 3
-    if (PyUnicode_Check(self->name)) {
-        dev = PyUnicode_AsUTF8(self->name);
+    // This is operation is different in Python 2.7 and 3+.
+    if (PYCOMPAT_STRING_CHECK(self->name)) {
+        dev = PYCOMPAT_STRING_AS_STRING(self->name);
     }
-#else
-    if (PyString_Check(self->name)) {
-        dev = PyString_AsString(self->name);
-    }
-#endif
 
     if (self->name != Py_None && dev == NULL) {
         // There was an error in the PyString_AsString or PyUnicode_AsUTF8 functions
@@ -328,19 +322,11 @@ AudioDeviceObj_set_name(AudioDeviceObj *self, PyObject *value, void *closure) {
         PyErr_SetString(PyExc_AttributeError, "cannot delete the name attribute.");
         return -1;
     }
-#if PY_MAJOR_VERSION >= 3
-    if (PyUnicode_Check(value) || value == Py_None) {
+    if (PYCOMPAT_STRING_CHECK(value) || value == Py_None) {
         Py_DECREF(self->name);
         self->name = value;
         Py_INCREF(self->name);
     }
-#else
-    if (PyString_Check(value) || value == Py_None) {
-      	Py_DECREF(self->name);
-        self->name = value;
-        Py_INCREF(self->name);  
-    }
-#endif
     else {
         PyErr_SetString(PyExc_TypeError, "value must be a string or None.");
         return -1;

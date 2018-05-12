@@ -46,13 +46,15 @@
 #define AUDIO_H_
 
 #include <stdbool.h>
-#include <Python.h>
 
 // Required for int16 and int32
 #include <sphinxbase/prim_type.h>
 
 // Required to use sphinxbase audio device implementations
 #include <sphinxbase/ad.h>
+
+// Includes Python.h and useful definitions for 2.x and 3.x compatibility.
+#include "PythonCompat.h"
 
 typedef struct {
     PyObject_HEAD
