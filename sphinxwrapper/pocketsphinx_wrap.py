@@ -6,6 +6,8 @@ and properties.
 from pocketsphinx import Decoder, Config
 from .config import set_hmm_and_dict_paths, search_arguments_set, set_lm_path,\
     ConfigError
+import tempfile
+import os
 
 
 class PocketSphinxError(Exception):
@@ -170,6 +172,41 @@ class PocketSphinx(Decoder):
     utterance_started = utt_started
     utterance_idle = utt_idle
     utterance_ended = utt_ended
+
+    def set_kws_list(self, name, kws_list):
+        """
+        Set a keywords Pocket Sphinx search with the specified name taking a
+        keywords list as a Python dictionary. `kws_list` should be a dictionary of
+        words to threshold value. It can also be a list or tuple of pairs:
+        [(words, threshold value), (words, threshold value)...]
+
+        This method generates a temporary keywords list file and calls the `set_kws`
+        method with its path.
+        :type name: str
+        :param kws_list: list | dict
+        """
+        if not kws_list:
+            return
+
+        # If we get a list or tuple, turn it into a dict.
+        if isinstance(kws_list, (list, tuple)):
+            kws_list = dict(kws_list)
+
+        # Get a new temporary file and write each words string and threshold value
+        # on separate lines with the threshold value escaped with forward slashes.
+        tf = tempfile.NamedTemporaryFile(mode="a", delete=False)
+        for words, threshold in kws_list.items():
+            if not isinstance(threshold, float):
+                raise PocketSphinxError("threshold value of '%s' for words '%s' is "
+                                        "not a number" % (words, threshold))
+            tf.write("%s /%s/\n" % (words, threshold))
+
+        # Close the file and then set the search using the file's path.
+        tf.close()
+        self.set_kws(name, tf.name)
+
+        # Delete the file manually.
+        os.remove(tf.name)
 
     @property
     def active_search(self):
