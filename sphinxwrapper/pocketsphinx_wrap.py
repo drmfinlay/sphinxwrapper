@@ -8,6 +8,7 @@ from .config import set_hmm_and_dict_paths, search_arguments_set, set_lm_path,\
     ConfigError
 import tempfile
 import os
+import numbers
 
 
 class PocketSphinxError(Exception):
@@ -196,9 +197,9 @@ class PocketSphinx(Decoder):
         # on separate lines with the threshold value escaped with forward slashes.
         tf = tempfile.NamedTemporaryFile(mode="a", delete=False)
         for words, threshold in kws_list.items():
-            if not isinstance(threshold, float):
+            if not isinstance(threshold, numbers.Number):
                 raise PocketSphinxError("threshold value of '%s' for words '%s' is "
-                                        "not a number" % (words, threshold))
+                                        "not a number" % (threshold, words))
             tf.write("%s /%s/\n" % (words, threshold))
 
         # Close the file and then set the search using the file's path.
