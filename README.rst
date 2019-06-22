@@ -1,6 +1,8 @@
-============
-Introduction
-============
+=============================
+Introduction to sphinxwrapper
+=============================
+
+|Docs Status|
 
 Alternative Python API for recognising speech with CMU Pocket Sphinx
 
@@ -111,3 +113,6 @@ Run the following in the repository folder to build it locally::
 .. _pocketsphinx-python: https://github.com/bambocher/pocketsphinx-python
 .. _pyaudio: http://people.csail.mit.edu/hubert/pyaudio/
 .. _reStructuredText: http://docutils.sourceforge.net/rst.html
+.. |Docs Status| image::
+   https://readthedocs.org/projects/sphinxwrapper/badge/?version=latest&style=flat
+   :target: https://sphinxwrapper.readthedocs.io
