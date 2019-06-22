@@ -24,9 +24,9 @@ copyright = u'2018, Dane Finlay'
 author = u'Dane Finlay'
 
 # The short X.Y version
-version = u'1.1'
+version = u'1.2'
 # The full version, including alpha/beta/rc tags
-release = u'1.1.1'
+release = u'1.2.0'
 
 
 # -- Mock CMU Sphinx dependencies --------------------------------------------
