@@ -6,5 +6,5 @@ setup(name='sphinxwrapper',
       author='Dane Finlay',
       author_email='Danesprite@gmail.com',
       packages=['sphinxwrapper'],
-      install_requires=['pyaudio', 'pocketsphinx']
+      install_requires=['pocketsphinx']
       )
