@@ -3,15 +3,15 @@ This is an example for using the PocketSphinx set_kws_list method to recognise a
 list of keyphrases. Once a keyphrase is heard, it will be printed and the program
 will terminate.
 
-Credit the example words and threshold values are from the following CMU Sphinx
+Credit: the example words and threshold values are from the following CMU Sphinx
 tutorial:
 https://cmusphinx.github.io/wiki/tutoriallm/#keyword-lists
 """
 
-from pyaudio import PyAudio, paInt16
-
-from sphinxwrapper import *
 import time
+
+from pyaudio import PyAudio, paInt16
+from sphinxwrapper import *
 
 
 def main():
@@ -22,8 +22,6 @@ def main():
         "other phrase": 1e-20
     }
 
-    # Note: this method is more suited to configurations where multiple searches are
-    # used, such as an LM search.
     # Set a keywords search using a dictionary
     ps.set_kws_list("kws", keywords_list)
     ps.active_search = "kws"
