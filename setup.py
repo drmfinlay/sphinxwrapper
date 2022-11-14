@@ -36,7 +36,7 @@ setup(
     long_description=get_long_description(),
     url='https://github.com/Danesprite/sphinxwrapper',
     author='Dane Finlay',
-    author_email='Danesprite@posteo.net',
+    author_email='dane@danefinlay.net',
     license='MIT',
     classifiers=[
         'Intended Audience :: Developers',
@@ -51,5 +51,5 @@ setup(
         'Topic :: Software Development :: Libraries',
     ],
     packages=['sphinxwrapper'],
-    install_requires=['pocketsphinx']
+    install_requires=['pocketsphinx==0.1.15']
 )
