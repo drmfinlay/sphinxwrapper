@@ -1,4 +1,0 @@
-#JSGF V1.0 UTF-8 en;
-grammar g;
-public <greet> = hi <name>;
-<name> = peter | john | mary | anna;

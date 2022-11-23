@@ -1,0 +1,8 @@
+#JSGF V1.0 UTF-8 en;
+grammar g;
+public <Command> = <TellTime>|<TellWeekday>|<TellDate>|<TellOS>|<Exit>;
+<TellTime> = what is the time;
+<TellWeekday> = what day is it;
+<TellDate> = what is the date;
+<TellOS> = what operating system is running;
+<Exit> = stop listening;
