@@ -4,14 +4,21 @@ Introduction to sphinxwrapper
 
 |Docs Status|
 
-Alternative Python API for recognising speech with CMU Pocket Sphinx
+Simplified Python API for the CMU Pocket Sphinx speech recogniser
 
-This package aims to provide a simple API for recognising speech using the
-Pocket Sphinx API. Pocket Sphinx is an open source, lightweight speech
-recognition engine. You can read more about the CMU Sphinx speech
-recognition projects `here <https://cmusphinx.github.io/wiki/>`__.
+This package provides a simple API for recognising speech using CMU Pocket
+Sphinx, an open source, lightweight speech recognition engine.  More information
+on CMU Pocket Sphinx, and other CMU speech recognition libraries, may be found
+at `cmusphinx.github.io <https://cmusphinx.github.io>`__.
 
-There are some usage examples in the repository's `examples folder`_.
+There are some usage examples in the repository's `examples folder`_
+demonstrating how to use this library to scan and process speech audio
+from a microphone.  Each of these examples require the `PyAudio`_ package, which
+may be installed by running the following command:
+
+.. code:: shell
+
+   pip install pyaudio
 
 
 Installation & dependencies
@@ -30,69 +37,67 @@ the repository, move to the root directory and run:
 
    pip install -e .
 
-Either of the above commands will also install the required
+Either of the above commands will also install version 0.1.15 of the required
 `pocketsphinx-python`_ package.
 
-The usage examples for ``sphinxwrapper`` require the cross-platform
-`pyaudio`_ Python package. It can be installed by running the following:
-
-
-.. code:: shell
-
-   pip install pyaudio
 
 Usage example
 -------------
 
-The following is a simple usage example showing how to use the
-``sphinxwrapper`` package to make Pocket Sphinx continuously recognise
-speech from the microphone using the default decoder configuration.
+The following example demonstrates how to use ``sphinxwrapper`` and `PyAudio`_
+to scan and interpret audio from the microphone using the default language model
+and dictionary.
 
 ..  code:: python
 
+    import os
     import time
 
     from pyaudio import PyAudio, paInt16
 
-    from sphinxwrapper import PocketSphinx
+    from sphinxwrapper import PocketSphinx, DefaultConfig
 
-    # Set up a Pocket Sphinx decoder with the default config
-    ps = PocketSphinx()
+    # Initialise a Pocket Sphinx decoder with the default configuration.
+    config = DefaultConfig()
+    config.set_string("-logfn", os.devnull)  # Suppress log output.
+    ps = PocketSphinx(config)
 
-    # Set up and register a callback function to print Pocket Sphinx's
-    # hypothesis for  recognised speech
-    def print_hypothesis(hyp):
-        # Get the hypothesis string from the Hypothesis object or None, then
-        # print it
-        speech = hyp.hypstr if hyp else None
-        print("Hypothesis: %s" % speech)
+    # Define decoder callback functions.
+    def speech_start_callback():
+        print("Speech started.")
 
-    ps.hypothesis_callback = print_hypothesis
+    def hypothesis_callback(hyp):
+        hypstr = hyp.hypstr if hyp else None
+        print("Hypothesis: %r" % hypstr)
 
-    # Decode from the default audio input device continously.
+    # Set decoder callback functions.
+    ps.speech_start_callback = speech_start_callback
+    ps.hypothesis_callback = hypothesis_callback
+
+    # Open an audio stream on the default input audio device.
     p = PyAudio()
     stream = p.open(format=paInt16, channels=1, rate=16000, input=True,
-                    frames_per_buffer=2048)
-    while True:
-        ps.process_audio(stream.read(2048))
-        time.sleep(0.1)
+                    frames_per_buffer=2048, input_device_index=None)
+    stream.start_stream()
 
+    # Recognise from the microphone in a loop until interrupted.
+    try:
+        print("Listening... Press Ctrl+C to exit...")
+        while True:
+            ps.process_audio(stream.read(2048))
+            time.sleep(0.1)
+    except KeyboardInterrupt:
+        stream.stop_stream()
+        p.terminate()
 
 
 Python versions
 ---------------
 
-This package has been written for Python 2.7 and above. It should work
-exactly the same way for each supported version. please file an issue if you
-come across any problems that are specific to the Python version you're
-using.
+This package has been written for Python 2.7 and above.  It should work the same
+way for each supported version.  Please file an issue if you encounter a problem
+specific to the Python version you're using.
 
-Future CMU Sphinx API changes
------------------------------
-
-As the CMU Sphinx libraries are pre-alpha, there may be future changes that
-break this package in some way. I'm happy to fix any such issues, just file
-an issue.
 
 Documentation
 -------------
@@ -100,7 +105,7 @@ Documentation
 The documentation for this project is written in `reStructuredText`_ and
 built using the `Sphinx documentation engine`_.
 
-Run the following in the repository folder to build it locally::
+Run the following commands in the repository folder to build it locally::
 
   cd docs
   pip install -r requirements.txt
@@ -111,7 +116,7 @@ Run the following in the repository folder to build it locally::
 .. _Sphinx documentation engine: http://www.sphinx-doc.org/en/stable
 .. _examples folder: https://github.com/Danesprite/sphinxwrapper/tree/master/examples
 .. _pocketsphinx-python: https://github.com/bambocher/pocketsphinx-python
-.. _pyaudio: http://people.csail.mit.edu/hubert/pyaudio/
+.. _PyAudio: http://people.csail.mit.edu/hubert/pyaudio/
 .. _reStructuredText: http://docutils.sourceforge.net/rst.html
 .. |Docs Status| image::
    https://readthedocs.org/projects/sphinxwrapper/badge/?version=latest&style=flat

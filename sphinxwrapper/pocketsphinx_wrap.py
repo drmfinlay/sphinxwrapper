@@ -21,8 +21,8 @@
 #
 
 """
-CMU Pocket Sphinx Decoder Classes
-----------------------------------------------------------------------------
+CMU Pocket Sphinx Decoder Class
+--------------------------------------------------------------------------------
 
 """
 
@@ -37,23 +37,32 @@ from .config import (set_hmm_and_dict_paths, search_arguments_set,
 
 class PocketSphinx(Decoder):
     """
-    Pocket Sphinx decoder subclass with processing methods providing
-    callback functionality and other things.
+    Pocket Sphinx decoder subclass with processing methods providing callback
+    functionality, as well as some other things.
 
-    This class will try to set required config options, such as '-hmm',
-    '-dict' and/or '-lm', in the config object automatically if they are not
-    set.
+    This class will try to set the '-hmm' and '-dict' configuration arguments
+    automatically if they are not set prior to initialisation.
+
+    If no search argument is present, the class will also try to set the '-lm'
+    argument so that the default language model is used.  Search arguments
+    include the following:
+
+     * '-lm'
+     * '-jsgf'
+     * '-fsg'
+     * '-keyphrase'
+     * '-kws'
 
     Construct arguments:
 
-     - *config* -- decoder configuration object. Will be initialised using
+     - *config* -- Decoder configuration object.  Will be initialised using
        :meth:`default_config` if unspecified.
-
 
     .. note::
 
-       The decoder class will not be initialised if the configuration object
-       specifies more than search argument.
+       An error will be raised if the configuration object specifies more than
+       search argument.  In this event, the decoder class will not be
+       initialised.
 
     """
 
@@ -94,16 +103,17 @@ class PocketSphinx(Decoder):
         Process audio from an audio buffer using the :meth:`process_raw`
         decoder method.
 
-        The speech start and hypothesis callbacks will be called if and when
-        necessary.
+        This method processes the given buffer with the :meth:`process_raw`
+        decoder method, invoking :attr:`speech_start_callback` and
+        :attr:`hypothesis_callback` when appropriate.
 
-        :param buf: audio buffer
-        :param no_search: whether to perform feature extraction, but no
+        :param buf: Audio buffer
+        :param no_search: Whether to perform feature extraction, but no
             recognition yet (default: *False*).
-        :param full_utterance: whether this block of data contains a full
-            utterance worth of data (default: *False*). This may produce
+        :param full_utterance: Whether this block of data contains a full
+            utterance worth of data (default: *False*).  This may produce
             more accurate results.
-        :param use_callbacks: whether speech start and hypothesis callbacks
+        :param use_callbacks: Whether speech start and hypothesis callbacks
             should be called (default: *True*).
         :type buf: str
         :type no_search: bool
@@ -161,9 +171,7 @@ class PocketSphinx(Decoder):
         """
         Check if the last audio buffer contained speech.
 
-        This method will also move utterance state from idle to started.
-
-        :returns: whether the last audio buffer contained speech.
+        :returns: Whether the last audio buffer contained speech.
         :rtype: bool
         """
         in_speech = super(PocketSphinx, self).get_in_speech()
@@ -171,31 +179,37 @@ class PocketSphinx(Decoder):
         # Move idle -> started to make utterance properties compatible with using
         # methods like process_raw instead of process_audio.
         if in_speech and self.utt_idle:
-            # Utterance has now started
             self._utterance_state = self._UTT_STARTED
-
         return in_speech
 
     def start_utt(self):
         """
         Starts a new utterance if one is not already in progress.
 
-        This method will *not* raise an error if an utterance is in progress
-        (started or idle) already.
+        Does nothing if an utterance is already in progress.
         """
         if self.utt_ended:
             super(PocketSphinx, self).start_utt()
             self._utterance_state = self._UTT_IDLE
+
+    def end_utt(self):
+        """
+        Ends the current utterance if one was in progress.
+
+        Does nothing if no utterance is in progress.
+        """
+        if not self.utt_ended:
+            super(PocketSphinx, self).end_utt()
+            self._utterance_state = self._UTT_ENDED
 
     @property
     def utt_idle(self):
         """
         Whether an utterance is in progress, but no speech has been detected yet.
 
-        :meth:`get_in_speech` would return ``False`` if this returns ``True``.
-
         :rtype: bool
         """
+        # This property is True if get_in_speech() returns False.
         return self._utterance_state == self._UTT_IDLE
 
     @property
@@ -203,24 +217,10 @@ class PocketSphinx(Decoder):
         """
         Whether an utterance is in progress and speech has been detected.
 
-        :meth:`get_in_speech` would return ``True`` if this returns ``True``.
-
         :rtype: bool
         """
+        # This property is True if get_in_speech() returns True.
         return self._utterance_state == self._UTT_STARTED
-
-    def end_utt(self):
-        """
-        Ends the current utterance if one was in progress.
-
-        This method is useful for resetting processing of audio via the
-        :meth:`process_audio` method.
-
-        It will *not* raise an error if no utterance was in progress.
-        """
-        if not self.utt_ended:
-            super(PocketSphinx, self).end_utt()
-            self._utterance_state = self._UTT_ENDED
 
     @property
     def utt_ended(self):
@@ -240,17 +240,14 @@ class PocketSphinx(Decoder):
 
     def set_kws_list(self, name, kws_list):
         """
-        Set a keywords Pocket Sphinx search with the specified name taking a
-        keywords list as a Python dictionary.
+        Set a keyword-list search which, when active, scans input audio for
+        keywords defined in the specified list or dictionary.
 
-        This method generates a temporary keywords list file and calls the
-        :meth:`set_kws` decoder method with its path.
-
-        :param name: search name
-        :param kws_list: dictionary of words to threshold value. Can also be
-            a list of 2-tuples.
+        :param name: Search name
+        :param kws_list: Dictionary of words to threshold value.  Can also be a
+            list of 2-tuples.
         :type name: str
-        :type kws_west: list | dict
+        :type kws_list: list | dict
         """
         if not kws_list:
             return
@@ -277,10 +274,10 @@ class PocketSphinx(Decoder):
         """
         The name of the currently active Pocket Sphinx search.
 
-        If the setter is passed a name with no matching Pocket Sphinx search, an
-        error will be raised.
+        If the setter is passed a name with no matching Pocket Sphinx search,
+        a ``RuntimeError`` will be raised.
 
-        :return: str
+        :rtype: str
         """
         return self.get_search()
 
@@ -291,7 +288,18 @@ class PocketSphinx(Decoder):
     @property
     def speech_start_callback(self):
         """
-        Callback for when speech starts.
+        Function invoked when speech is first detected.
+
+        To use this callback, set it to a callable that takes no arguments: ::
+
+            ps = PocketSphinx()
+
+            def callback():
+                print("Speech started.")
+
+            ps.speech_start_callback = callback
+
+        To disable this callback, set it to ``None`` (default).
         """
         return self._speech_start_callback
 
@@ -304,7 +312,19 @@ class PocketSphinx(Decoder):
     @property
     def hypothesis_callback(self):
         """
-        Callback called with Pocket Sphinx's hypothesis for what was said.
+        Function invoked when the decoder has finished processing speech.
+
+        To use this callback, set it to a callable that takes one positional
+        argument, the decoder's hypothesis: ::
+
+            ps = PocketSphinx()
+
+            def callback(hyp):
+                print(hyp)
+
+            ps.hypothesis_callback = callback
+
+        To disable this callback, set it to ``None`` (default).
         """
         return self._hypothesis_callback
 

@@ -8,7 +8,7 @@ sphinxwrapper
 
 Release v\ |release|
 
-Alternative Python API for recognising speech with CMU Pocket Sphinx
+Simplified Python API for recognising speech with CMU Pocket Sphinx
 
 .. toctree::
    :maxdepth: 2
@@ -16,7 +16,6 @@ Alternative Python API for recognising speech with CMU Pocket Sphinx
 
    introduction
    api
-   extension
 
 
 Indices and tables

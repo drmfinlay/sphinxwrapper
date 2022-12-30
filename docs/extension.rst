@@ -1,1 +1,0 @@
-.. include:: ../extension/README.rst

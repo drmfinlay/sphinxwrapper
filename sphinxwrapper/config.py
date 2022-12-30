@@ -39,16 +39,17 @@ class ConfigError(Exception):
 
 def set_lm_path(config, model_path=None):
     """
-    This function will try to find the LM file in model_path and set the
-    '-lm' argument for the given ``Config`` object.
+    This function will try to find the language model file under *model_path*
+    and set the '-lm' argument for the given ``Config`` object.
 
-    Only files ending with *.lm* or *.lm.bin* will be considered. An error
-    will be raised if an LM file cannot be found.
+    By default, only files ending with *.lm* or *.lm.bin* will be considered.
 
-    :param config: decoder configuration object
-    :param model_path: path to search for the LM file. The Pocket Sphinx
-        :meth:`get_model_path()` function is used if the parameter is
-        unspecified.
+    An error will be raised if the path was not found.
+
+    :param config: Decoder configuration object
+    :param model_path: Path to search for the language model file.
+        The Pocket Sphinx :meth:`get_model_path()` function is used if this
+        parameter is unspecified.
     :type config: Config
     :type model_path: str
     :raises: ConfigError
@@ -128,18 +129,17 @@ search_arguments = ["-lm", "-jsgf", "-kws", "-keyphrase", "-fsg"]
 
 def search_arguments_set(config):
     """
-    This function returns the search arguments set for a given ``Config``
-    object.
+    Get a list of search arguments set for a given ``Config`` object.
 
     Search arguments include:
 
-    * *-lm* (default)
-    * *-fsg*
-    * *-jsgf*
-    * *-keyphrase*
-    * *-kws*
+     * '-lm' (default)
+     * '-fsg'
+     * '-jsgf'
+     * '-keyphrase'
+     * '-kws'
 
-    :param config: decoder configuration object
+    :param config: Decoder configuration object
     :type config: Config
     :return: list
     """
