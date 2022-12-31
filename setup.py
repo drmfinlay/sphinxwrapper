@@ -30,7 +30,7 @@ def get_long_description():
 
 setup(
     name='sphinxwrapper',
-    version='1.2.0',
+    version='1.3.0',
     description='Simplified Python API for recognising speech with CMU '
                 'Pocket Sphinx',
     long_description=get_long_description(),
