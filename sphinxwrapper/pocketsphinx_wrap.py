@@ -31,8 +31,8 @@ import tempfile
 
 from pocketsphinx import Decoder, Config
 
-from .config import (set_hmm_and_dict_paths, search_arguments_set,
-                     set_lm_path, ConfigError)
+from .config import (set_hmm_and_dict_paths, search_arguments_set, set_lm_path,
+                     ConfigError)
 
 
 class PocketSphinx(Decoder):
@@ -78,16 +78,17 @@ class PocketSphinx(Decoder):
             config=Decoder.default_config()
         assert isinstance(config, Config)
 
+        # Get the number of search arguments set.
         search_args_set = search_arguments_set(config)
 
+        # If nothing else is set, use the language model.
         if len(search_args_set) == 0:
-            # Use the language model by default if nothing else is set
             set_lm_path(config)
         elif len(search_args_set) > 1:
-            raise ConfigError("more than one search argument was set in the"
+            raise ConfigError("More than one search argument was set in the"
                               " Config object")
 
-        # Set the required config paths if they aren't already set
+        # Set the required config paths if they aren't already set.
         if not (config.get_string("-hmm") and config.get_string("-dict")):
             set_hmm_and_dict_paths(config)
 
@@ -95,13 +96,14 @@ class PocketSphinx(Decoder):
         self._hypothesis_callback = None
         self._utterance_state = self._UTT_ENDED
 
+        # Call the super constructor.
         super(PocketSphinx, self).__init__(config)
 
     def process_audio(self, buf, no_search=False, full_utterance=False,
                       use_callbacks=True):
         """
-        Process audio from an audio buffer using the :meth:`process_raw`
-        decoder method.
+        Process an audio buffer and return the speech hypothesis, if there is
+        one.
 
         This method processes the given buffer with the :meth:`process_raw`
         decoder method, invoking :attr:`speech_start_callback` and
@@ -119,22 +121,24 @@ class PocketSphinx(Decoder):
         :type no_search: bool
         :type full_utterance: bool
         :type use_callbacks: bool
+        :rtype: Hypothesis | None
+        :returns: The decoder's hypothesis, or *None* if there isn't one (yet).
         """
         if self.utt_ended:
             self.start_utt()
 
         self.process_raw(buf, no_search, full_utterance)
 
-        # Note that get_in_speech moves idle -> started if returning True, so check
-        # utt_idle before calling that method.
+        # Note: get_in_speech() moves the state from IDLE to STARTED if
+        #  returning True, so check utt_idle before calling that method.
         was_idle = self.utt_idle
 
         # Check if we're in speech.
         in_speech = self.get_in_speech()
 
-        # In speech and idle -> started transition just occurred.
+        # In speech and IDLE -> STARTED transition just occurred, so call the
+        # speech start callback, if appropriate.
         if in_speech and was_idle and self.utt_started:
-            # Call speech start callback if it is set
             if use_callbacks and self.speech_start_callback:
                 self.speech_start_callback()
 
@@ -143,29 +147,48 @@ class PocketSphinx(Decoder):
             self.end_utt()
             hyp = self.hyp()
 
-            # Call the hypothesis callback if using callbacks and if it is set
+            # Call the hypothesis callback, if appropriate.
             if use_callbacks and self.hypothesis_callback:
                 self.hypothesis_callback(hyp)
-            elif not use_callbacks:
-                return hyp
+
+            # Return the hypothesis.
+            return hyp
 
     def batch_process(self, buffers, no_search=False, full_utterance=False,
                       use_callbacks=True):
         """
-        Process a list of audio buffers and return the speech hypothesis or use the
-        decoder callbacks if use_callbacks is True.
-        """
-        result = None
-        for buf in buffers:
-            if use_callbacks:
-                self.process_audio(buf, no_search, full_utterance, use_callbacks)
-            else:
-                processing_result = self.process_audio(
-                    buf, no_search, full_utterance, use_callbacks)
-                if processing_result:  # this'll be the hypothesis
-                    result = processing_result
+        Process a list of audio buffers and return the speech hypothesis, if
+        there one.
 
-        return result
+        This method uses the :meth:`process_audio` method.
+
+        .. note::
+
+           If *buffers* contains more than one utterance worth of audio, only
+           the final ``Hypothesis`` object is returned.
+
+        :param buffers: List of audio buffers
+        :param no_search: Whether to perform feature extraction, but no
+            recognition yet (default: *False*).
+        :param full_utterance: Whether this block of data contains a full
+            utterance worth of data (default: *False*).  This may produce
+            more accurate results.
+        :param use_callbacks: Whether speech start and hypothesis callbacks
+            should be called (default: *True*).
+        :type buffers: list
+        :type no_search: bool
+        :type full_utterance: bool
+        :type use_callbacks: bool
+        :rtype: Hypothesis | None
+        :returns: The decoder's hypothesis, or *None* if there isn't one (yet).
+
+        """
+        final_result = None
+        for buf in buffers:
+            result = self.process_audio(buf, no_search, full_utterance,
+                                        use_callbacks)
+            if result: final_result = result
+        return final_result
 
     def get_in_speech(self):
         """
@@ -256,18 +279,19 @@ class PocketSphinx(Decoder):
         if isinstance(kws_list, (list, tuple)):
             kws_list = dict(kws_list)
 
-        # Get a new temporary file and write each words string and threshold value
-        # on separate lines with the threshold value escaped with forward slashes.
+        # Get a new temporary file and write each keyword string and threshold
+        # value on separate lines with the threshold value bounded with forward
+        # slashes.
         tf = tempfile.NamedTemporaryFile(mode="a", delete=False)
         for words, threshold in kws_list.items():
             tf.write("%s /%s/\n" % (words, float(threshold)))
-
-        # Close the file and then set the search using the file's path.
         tf.close()
-        self.set_kws(name, tf.name)
 
-        # Delete the file manually.
-        os.remove(tf.name)
+        # Set the search using the temporary file, deleting it afterwards.
+        try:
+            self.set_kws(name, tf.name)
+        finally:
+            os.remove(tf.name)
 
     @property
     def active_search(self):
