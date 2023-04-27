@@ -12,8 +12,8 @@ on CMU Pocket Sphinx, and other CMU speech recognition libraries, may be found
 at `cmusphinx.github.io <https://cmusphinx.github.io>`__.
 
 There are some usage examples in the repository's `examples folder`_
-demonstrating how to use this library to scan and process speech audio
-from a microphone.  Each of these examples require the `PyAudio`_ package, which
+demonstrating how to use this library to scan and process speech audio from
+a microphone.  Each of these examples require the `PyAudio`_ package, which
 may be installed by running the following command:
 
 .. code:: shell
@@ -39,6 +39,9 @@ the repository, move to the root directory and run:
 
 Either of the above commands will also install version 0.1.15 of the required
 `pocketsphinx-python`_ package.
+
+This library does not currently support Python version 3.10 or
+above on Windows.
 
 
 Usage example
